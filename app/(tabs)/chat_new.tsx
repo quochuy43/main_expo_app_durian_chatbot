@@ -34,6 +34,8 @@ const generateUniqueId = () => {
 };
 
 export default function ChatbotScreen() {
+    // Type cho biến là mảng của interface Message
+    // messages là mảng các đối tượng Message
     const [messages, setMessages] = useState<Message[]>([
         {
             id: generateUniqueId(),
@@ -43,7 +45,11 @@ export default function ChatbotScreen() {
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    // pendingImage: Lưu ảnh khi người dùng chọn (chưa gửi)
+    //setPendingImage: Cập nhật ảnh
+    //{ uri: string; file: any }: Object chứa đường dẫn ảnh và file. | null: có thể không có ảnh và giá trị khởi tạo là null (chưa có ảnh)
     const [pendingImage, setPendingImage] = useState<{ uri: string; file: any } | null>(null);
+    // Tham chiếu trực tiếp đến component ScrollView
     const scrollRef = useRef<ScrollView>(null);
 
     useEffect(() => {
@@ -56,6 +62,9 @@ export default function ChatbotScreen() {
         scrollRef.current?.scrollToEnd({ animated: true });
     };
 
+    // Dependency [messages]: Chạy khi mảng messages thay đổi
+    // Chức năng: Mỗi khi có tin nhắn mới → tự động cuộn xuống cuối
+    // UX: Người dùng luôn thấy tin nhắn mới nhất
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
@@ -68,15 +77,28 @@ export default function ChatbotScreen() {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: 'images',  // Fix: Sử dụng string literal 'images' để tránh deprecation (theo Expo docs)
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
+            mediaTypes: 'images',  // Chỉ cho chọn ảnh
+            allowsEditing: true, // Cho phép chỉnh sửa/cắt ảnh trước khi chọn
+            aspect: [4, 3], // Tỷ lệ khung hình 4:3
+            quality: 1, // Chất lượng ảnh cao nhất
         });
 
+        // result trả về:
+        //{
+        //   canceled: false,        // false = chọn ảnh, true = hủy
+        //   assets: [
+        //     {
+        //       uri: 'file://...',   // Đường dẫn ảnh
+        //       width: 800,
+        //       height: 600,
+        //       fileName: 'image.jpg'
+        //     }
+        //   ]
+        // }
+
         if (!result.canceled && result.assets?.[0]) {
-            const asset = result.assets[0];
-            const imageUri = asset.uri;
+            const asset = result.assets[0]; // Lấy ảnh đầu tiên trong mảng assets
+            const imageUri = asset.uri; // Đường dẫn ảnh
             const file = {
                 uri: imageUri,
                 name: asset.fileName || 'image.jpg',
@@ -91,6 +113,9 @@ export default function ChatbotScreen() {
                 image: imageUri,
                 isPending: true,
             };
+            // prev là giá trị hiện tại (previous state) của messages — React truyền vào tự động cho bạn.
+            // [...] là spread operator: ...prev sao chép tất cả phần tử hiện có trong mảng prev.
+            // [...prev, previewMsg] tạo một mảng mới chứa tất cả tin nhắn cũ, sau đó thêm previewMsg vào cuối.
             setMessages((prev) => [...prev, previewMsg]);
         }
     };
@@ -101,6 +126,7 @@ export default function ChatbotScreen() {
         if (!message && !hasFile) return;
 
         const finalMessage = message || (hasFile ? 'Hãy giới thiệu về' : '');
+        // sao chép mảng messages hiện tại vào biến cục bộ để thao tác (không mutate trực tiếp state).
         let updatedMessages = [...messages];
 
         if (hasFile) {
@@ -131,8 +157,9 @@ export default function ChatbotScreen() {
         setMessages(updatedMessages);
         scrollToBottom();
 
+        // tạo cơ chế hủy request nếu server không phản hồi trong 30s
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);  // 30s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
 
         try {
             const formData = new FormData();
