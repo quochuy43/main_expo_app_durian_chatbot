@@ -7,6 +7,7 @@ interface ChatInputProps {
   setMessage: (message: string) => void;
   sendMessage: () => void;
   pickImage: () => void;
+  pickCamera: () => void;
   loading: boolean;
   hasPendingImage: boolean;
 }
@@ -16,6 +17,7 @@ export default function ChatInput({
   setMessage,
   sendMessage,
   pickImage,
+  pickCamera,
   loading,
   hasPendingImage,
 }: ChatInputProps) {
@@ -45,6 +47,23 @@ export default function ChatInput({
       >
         <Ionicons
           name={hasPendingImage ? 'image' : 'image-outline'}
+          size={22}
+          color={hasPendingImage ? '#ffffff' : '#2563eb'}
+        />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.iconButton,
+          styles.imageButton,
+          hasPendingImage && styles.imageButtonActive,
+          loading && styles.disabledButton,
+        ]}
+        onPress={pickCamera}
+        disabled={loading}
+      >
+        <Ionicons
+          name={hasPendingImage ? 'camera' : 'camera-outline'}
           size={22}
           color={hasPendingImage ? '#ffffff' : '#2563eb'}
         />
