@@ -10,6 +10,8 @@ import {
   FlatList,
   ImageBackground,
   Alert,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
@@ -63,6 +65,8 @@ export default function HomeScreen() {
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
   const [loading, setLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isScrolledToBottom, setIsScrolledToBottom] = useState(true);
+  const [userInteractedDuringGeneration, setUserInteractedDuringGeneration] = useState(false);
 
   const background = useThemeColor({}, "background");
   const iconColor = useThemeColor({}, "text");
@@ -77,16 +81,29 @@ export default function HomeScreen() {
     });
   };
 
-  const scrollToBottom = () => {
+  const scrollToBottom = (animated: boolean = true) => {
     requestAnimationFrame(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
+      flatListRef.current?.scrollToEnd({ animated });
     });
   };
 
-  // Giữ lại useEffect này để cuộn xuống khi tin nhắn mới được thêm vào hoàn toàn
   useEffect(() => {
-    scrollToBottom();
+    if (isScrolledToBottom && !userInteractedDuringGeneration) {
+      scrollToBottom(false); 
+    }
   }, [messages]);
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - contentOffset.y - layoutMeasurement.height;
+    const atBottom = distanceFromBottom <= 50;
+
+    setIsScrolledToBottom(atBottom);
+
+    if (loading && !atBottom && !userInteractedDuringGeneration) {
+      setUserInteractedDuringGeneration(true);
+    }
+  };
 
   const handleImageUpload = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -96,9 +113,6 @@ export default function HomeScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      // expo-image-picker 15 (đi kèm Expo SDK 54) vẫn dùng enum MediaTypeOptions,
-      // nhưng khi chạy trong một số môi trường (ví dụ Expo Go mới) native module
-      // lại kỳ vọng mảng string dạng 'images'. Ép kiểu any để tương thích runtime.
       mediaTypes: ["images"] as any,
       allowsEditing: true,
       aspect: [4, 3],
@@ -196,6 +210,7 @@ export default function HomeScreen() {
     setInputMessage("");
     setPendingImage(null);
     setLoading(true);
+    setUserInteractedDuringGeneration(false); 
 
     const botMsg: Message = {
       id: generateUniqueId(),
@@ -204,7 +219,7 @@ export default function HomeScreen() {
     };
 
     setMessages((prev) => [...prev, botMsg]);
-    scrollToBottom();
+    scrollToBottom(false); 
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -230,25 +245,68 @@ export default function HomeScreen() {
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
-      const fullText = await response.text();
-      if (!fullText) {
-        throw new Error("Empty response from backend");
+      let fullText = "";
+      if (response.body) {
+        // Thử streaming nếu có body
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let displayText = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          displayText += chunk;
+
+          // Cập nhật UI mỗi chunk
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === botMsg.id ? { ...msg, text: displayText } : msg,
+            ),
+          );
+
+          if (isScrolledToBottom && !userInteractedDuringGeneration) {
+            scrollToBottom(false);
+          }
+
+          await delay(100);
+        }
+
+        fullText = displayText;
+      } else {
+        // Fallback nếu không có body stream: dùng response.text() và simulate batching
+        fullText = await response.text();
+        if (!fullText) {
+          throw new Error("Empty response from backend");
+        }
+
+        const words = fullText.split(" ");
+        let displayText = "";
+        let batch = "";
+
+        for (let i = 0; i < words.length; i++) {
+          batch += (i > 0 ? " " : "") + words[i];
+          if (i % 5 === 4 || i === words.length - 1) { // Batch mỗi 5 từ
+            displayText += batch;
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === botMsg.id ? { ...msg, text: displayText } : msg,
+              ),
+            );
+            batch = "";
+            await delay(150); // Độ trễ cho batch
+            if (isScrolledToBottom && !userInteractedDuringGeneration) {
+              scrollToBottom(false);
+            }
+          }
+        }
       }
 
-      const words = fullText.split(" ");
-      let displayText = "";
-
-      for (let i = 0; i < words.length; i++) {
-        displayText += (i > 0 ? " " : "") + words[i];
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === botMsg.id ? { ...msg, text: displayText } : msg,
-          ),
-        );
-        await delay(30);
+      // Hoàn tất
+      if (isScrolledToBottom && !userInteractedDuringGeneration) {
+        scrollToBottom(false);
       }
-
-      scrollToBottom(); 
 
     } catch (err: any) {
       console.error("Chat error:", err);
@@ -266,7 +324,10 @@ export default function HomeScreen() {
     } finally {
       clearTimeout(timeoutId);
       setLoading(false);
-      scrollToBottom(); 
+      setUserInteractedDuringGeneration(false); // Reset after generation
+      if (isScrolledToBottom) {
+        scrollToBottom(false);
+      }
     }
   };
 
@@ -296,7 +357,10 @@ export default function HomeScreen() {
         <Animated.View style={[{ flex: 1 }, mainAnimatedStyle]}>
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <KeyboardAvoidingView
+              // Thay đổi 1: Sử dụng 'padding' cho iOS và undefined/height cho Android
               behavior={Platform.OS === "ios" ? "padding" : undefined}
+              // Thay đổi 2: Thêm offset (khoảng 90-100px để bù Header và Status bar)
+              keyboardVerticalOffset={Platform.OS === "ios" ? 45 : 0}
               style={styles.keyboardAvoidView}
             >
               {/* Header */}
@@ -327,6 +391,15 @@ export default function HomeScreen() {
                   )}
                   contentContainerStyle={styles.messagesList}
                   showsVerticalScrollIndicator={false}
+                  style={{ flex: 1 }}
+                  alwaysBounceVertical={true}
+                  bounces={true}
+                  keyboardDismissMode="on-drag"
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
+                  initialNumToRender={10}
+                  maxToRenderPerBatch={5}
+                  windowSize={21}
                 />
               </View>
 
@@ -334,7 +407,7 @@ export default function HomeScreen() {
               <ChatInput
                 message={inputMessage}
                 setMessage={setInputMessage}
-                sendMessage={sendMessage}
+                sendMessage={() => sendMessage()}
                 pickImage={handleImageUpload}
                 loading={loading}
                 hasPendingImage={Boolean(pendingImage)}
@@ -353,7 +426,6 @@ export default function HomeScreen() {
     </GestureHandlerRootView>
   );
 }
-
 
 const styles = StyleSheet.create({
   keyboardAvoidView: { flex: 1 },
@@ -377,7 +449,7 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     padding: 16,
-    paddingBottom: 120,
+    paddingBottom: 20, 
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
