@@ -232,7 +232,7 @@ export default function HomeScreen() {
         formData.append("image", imageFile as any);
       }
 
-      const response = await fetch("https://cef2fa468714.ngrok-free.app/chat/stream", {
+      const response = await fetch("https://abcf26a58ad9.ngrok-free.app/chat/stream", {
         method: "POST",
         body: formData,
         signal: controller.signal,
