@@ -131,6 +131,48 @@ export default function HomeScreen() {
     }
   };
 
+
+const handleImageCapture = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync(); 
+    
+    if (status !== "granted") {
+        Alert.alert("Quyền truy cập", "Cần quyền truy cập Camera để chụp ảnh.");
+        return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+
+        allowsEditing: true, 
+        aspect: [4, 3], 
+        quality: 1, 
+    });
+    if (!result.canceled && result.assets?.[0]) {
+        const asset = result.assets[0];
+        const imageUri = asset.uri;
+        const file = {
+            uri: imageUri,
+            name: asset.fileName || "photo.jpg", 
+            type: asset.mimeType || "image/jpeg",
+        };
+
+        setPendingImage({ uri: imageUri, file });
+
+        const previewMsg: Message = {
+            id: generateUniqueId(),
+            sender: "user",
+            text: inputMessage.trim(), 
+            image: imageUri,
+            isPending: true,
+        };
+
+        setMessages((prev) => [
+            ...prev.filter((msg) => !msg.isPending),
+            previewMsg,
+        ]);
+    }
+};
+
+
   const clearChat = () => {
     setMessages([
       {
@@ -217,7 +259,8 @@ export default function HomeScreen() {
         formData.append("image", imageFile as any);
       }
 
-      const response = await fetch("https://cef2fa468714.ngrok-free.app/chat/stream", {
+      // const response = await fetch("https://90ad1b0dcf73.ngrok-free.app/chat/stream", {
+        const response = await fetch("http://192.168.210.228:8000/chat/stream", {
         method: "POST",
         body: formData,
         signal: controller.signal,
@@ -336,6 +379,7 @@ export default function HomeScreen() {
                 setMessage={setInputMessage}
                 sendMessage={sendMessage}
                 pickImage={handleImageUpload}
+                pickCamera={handleImageCapture}
                 loading={loading}
                 hasPendingImage={Boolean(pendingImage)}
               />
