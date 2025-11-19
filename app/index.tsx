@@ -248,7 +248,7 @@ export default function HomeScreen() {
         await delay(30);
       }
 
-      scrollToBottom(); 
+      scrollToBottom();
 
     } catch (err: any) {
       console.error("Chat error:", err);
@@ -266,7 +266,7 @@ export default function HomeScreen() {
     } finally {
       clearTimeout(timeoutId);
       setLoading(false);
-      scrollToBottom(); 
+      scrollToBottom();
     }
   };
 
