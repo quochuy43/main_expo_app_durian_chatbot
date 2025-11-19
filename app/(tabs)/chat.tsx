@@ -1,19 +1,19 @@
-import React, { useState, useRef, useEffect } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    View,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    ScrollView,
-    Image,
-    StyleSheet,
     Alert,
     Dimensions,
-    ViewStyle,
-    TextStyle,
+    Image,
     ImageStyle,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TextStyle,
+    TouchableOpacity,
+    View,
+    ViewStyle,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import MarkdownDisplay from 'react-native-markdown-display';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -44,13 +44,18 @@ export default function ChatbotScreen() {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [pendingImage, setPendingImage] = useState<{ uri: string; file: any } | null>(null);
+    const [isStreaming, setIsStreaming] = useState(false);
     const scrollRef = useRef<ScrollView>(null);
+    const botTextRef = useRef(''); // Perf: Accumulate text mà không re-render thừa
+    const sendDebounceRef = useRef<number | null>(null); // Fix: number cho RN setTimeout
 
     useEffect(() => {
         return () => {
-            // Optional: Cleanup nếu cần, nhưng expo tự handle
+            if (sendDebounceRef.current !== null) {
+                clearTimeout(sendDebounceRef.current);
+            }
         };
-    }, [pendingImage]);
+    }, []);
 
     const scrollToBottom = () => {
         scrollRef.current?.scrollToEnd({ animated: true });
@@ -61,6 +66,7 @@ export default function ChatbotScreen() {
     }, [messages]);
 
     const handleImageUpload = async () => {
+        if (isStreaming || loading) return;
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
             Alert.alert('Quyền truy cập', 'Cần quyền truy cập gallery để chọn ảnh.');
@@ -68,7 +74,7 @@ export default function ChatbotScreen() {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: 'images',
             allowsEditing: true,
             aspect: [4, 3],
             quality: 1,
@@ -96,85 +102,170 @@ export default function ChatbotScreen() {
     };
 
     const sendMessage = async (messageText?: string) => {
-        const message = messageText || input.trim();
-        const hasFile = pendingImage?.file;
-        if (!message && !hasFile) return;
-
-        const finalMessage = message || (hasFile ? 'Hãy giới thiệu về' : '');
-        let updatedMessages = [...messages];
-
-        if (hasFile) {
-            updatedMessages = updatedMessages.map((msg) =>
-                msg.isPending
-                    ? { ...msg, isPending: false, text: finalMessage }
-                    : msg,
-            );
-        } else {
-            updatedMessages.push({
-                id: generateUniqueId(),
-                sender: 'user',
-                text: finalMessage,
-            });
+        // Debounce 500ms để tránh lặp press/enter
+        if (sendDebounceRef.current !== null) {
+            clearTimeout(sendDebounceRef.current);
         }
+        sendDebounceRef.current = setTimeout(async () => { // Fix: setTimeout trả number
+            if (isStreaming || loading) {
+                console.log('⏹️ Skip duplicate sendMessage');
+                return;
+            }
 
-        setMessages(updatedMessages);
-        setInput('');
-        setPendingImage(null);
-        setLoading(true);
+            const message = messageText || input.trim();
+            const hasFile = pendingImage?.file;
+            if (!message && !hasFile) return;
 
-        const botMsg: Message = {
-            id: generateUniqueId(),
-            sender: 'bot',
-            text: 'Đang suy nghĩ...',
-        };
-        updatedMessages.push(botMsg);
-        setMessages(updatedMessages);
+            const finalMessage = message || (hasFile ? 'Hãy giới thiệu về' : '');
+            let updatedMessages = [...messages];
 
-        try {
-            const formData = new FormData();
-            formData.append('user_id', 'user111');
-            formData.append('message', finalMessage);
             if (hasFile) {
-                formData.append('image', pendingImage!.file as any);
-            }
-
-            const response = await fetch('http://192.168.101.95:8000/chat/stream', {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-            const reader = response.body?.getReader();
-            if (!reader) throw new Error('No reader');
-
-            const decoder = new TextDecoder();
-            let fullText = '';
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                const chunk = decoder.decode(value, { stream: true });
-                fullText += chunk;
-                updatedMessages[updatedMessages.length - 1].text = fullText;
-                setMessages([...updatedMessages]);
-            }
-        } catch (err: any) {
-            const withoutBot = updatedMessages.slice(0, -1);
-            setMessages([
-                ...withoutBot,
-                {
+                updatedMessages = updatedMessages.map((msg) =>
+                    msg.isPending ? { ...msg, isPending: false, text: finalMessage } : msg
+                );
+            } else {
+                updatedMessages.push({
                     id: generateUniqueId(),
-                    sender: 'error',
-                    text: '❌ Lỗi khi gửi: ' + err.message,
-                },
-            ]);
-        } finally {
-            setLoading(false);
-        }
+                    sender: 'user',
+                    text: finalMessage,
+                });
+            }
+
+            setMessages(updatedMessages);
+            setInput('');
+            setPendingImage(null);
+            setLoading(true);
+            setIsStreaming(true);
+
+            const botMsgId = generateUniqueId();
+            const botMsg: Message = {
+                id: botMsgId,
+                sender: 'bot',
+                text: '',
+                isPending: true,
+            };
+            updatedMessages.push(botMsg);
+            setMessages(updatedMessages);
+            scrollToBottom();
+
+            botTextRef.current = ''; // Reset accum text
+            let chunkReceived = false;
+            let timeoutId: number | null = null;
+
+            const endStream = (error?: any) => {
+                if (timeoutId !== null) {
+                    clearTimeout(timeoutId);
+                    timeoutId = null;
+                }
+                setLoading(false);
+                setIsStreaming(false);
+                // Update final bot text từ ref
+                setMessages((prev) =>
+                    prev.map((msg) =>
+                        msg.id === botMsgId ? { ...msg, text: botTextRef.current, isPending: false } : msg
+                    )
+                );
+                if (error) {
+                    const withoutBot = updatedMessages.filter((m) => m.id !== botMsgId);
+                    setMessages([
+                        ...withoutBot,
+                        {
+                            id: generateUniqueId(),
+                            sender: 'error',
+                            text: '❌ Lỗi kết nối: ' + (error.message || 'Unknown error'),
+                        },
+                    ]);
+                    scrollToBottom();
+                }
+            };
+
+            // Timeout 90s, chỉ nếu chưa chunk
+            timeoutId = setTimeout(() => {
+                if (!chunkReceived) {
+                    console.log('⏰ Stream timeout');
+                    endStream(new Error('Timeout'));
+                }
+            }, 90000);
+
+            try {
+                const formData = new FormData();
+                formData.append('user_id', 'user321');
+                formData.append('message', finalMessage);
+                if (hasFile) {
+                    formData.append('image', pendingImage!.file as any);
+                }
+
+                console.log('🔍 Starting fetch stream...');
+
+                const response = await fetch('http://192.168.101.95:8000/chat/stream', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                if (!response.body) {
+                    throw new Error('No response body');
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                let updateCounter = 0; // Fix: Local let, không static
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    let lines = buffer.split('\n\n'); // SSE format: chunks separated by \n\n
+                    buffer = lines.pop() || ''; // Keep incomplete line
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            let chunk = line.slice(6).trim(); // Parse "data: chunk"
+                            if (chunk) {
+                                // Fix text: Add space/newline nếu cần
+                                if (chunk && !/\s$/.test(chunk) && !/[\.\!\?\n]$/.test(chunk)) {
+                                    chunk += ' ';
+                                }
+                                botTextRef.current += chunk;
+                                chunkReceived = true;
+                                console.log('📦 Received chunk:', chunk);
+
+                                // Update UI mỗi 3 chunks để tránh lag (batch)
+                                updateCounter++;
+                                if (updateCounter % 3 === 0) {
+                                    setMessages((prev) =>
+                                        prev.map((msg) =>
+                                            msg.id === botMsgId
+                                                ? { ...msg, text: botTextRef.current, isPending: false }
+                                                : msg
+                                        )
+                                    );
+                                    scrollToBottom();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // End sau full read
+                console.log('🏁 Stream ended');
+                endStream();
+
+            } catch (err: any) {
+                console.error('💥 Stream error:', err);
+                endStream(err);
+            }
+        }, 500); // Debounce delay
     };
 
     const clearChat = () => {
+        if (isStreaming || loading) return;
         setMessages([
             {
                 id: Date.now().toString(),
@@ -184,6 +275,8 @@ export default function ChatbotScreen() {
         ]);
         setPendingImage(null);
         setInput('');
+        setIsStreaming(false);
+        botTextRef.current = '';
     };
 
     return (
@@ -229,7 +322,11 @@ export default function ChatbotScreen() {
                         ) : msg.sender === 'bot' ? (
                             <View>
                                 <Text style={styles.senderLabel}>Bot:</Text>
-                                <MarkdownDisplay style={markdownStyles}>{msg.text}</MarkdownDisplay>
+                                {msg.isPending ? (
+                                    <Text style={styles.messageText}>Đang suy nghĩ...</Text>
+                                ) : (
+                                    <MarkdownDisplay style={markdownStyles}>{msg.text}</MarkdownDisplay>
+                                )}
                             </View>
                         ) : (
                             <Text style={styles.errorText}>{msg.text}</Text>
@@ -241,8 +338,8 @@ export default function ChatbotScreen() {
             <View style={styles.inputContainer}>
                 <TouchableOpacity
                     onPress={handleImageUpload}
-                    disabled={loading}
-                    style={[styles.imageButton, loading && styles.disabledButton]}
+                    disabled={loading || isStreaming}
+                    style={[styles.imageButton, (loading || isStreaming) && styles.disabledButton]}
                 >
                     <Text style={styles.buttonText}>📷 Ảnh</Text>
                 </TouchableOpacity>
@@ -256,25 +353,26 @@ export default function ChatbotScreen() {
                     }
                     value={input}
                     onChangeText={setInput}
-                    onSubmitEditing={() => !loading && sendMessage()}
-                    editable={!loading}
+                    onSubmitEditing={() => !loading && !isStreaming && sendMessage()}
+                    editable={!loading && !isStreaming}
                     multiline
+                    returnKeyType="send"
                 />
 
                 <TouchableOpacity
-                    onPress={() => !loading && sendMessage()}
-                    disabled={loading}
-                    style={[styles.sendButton, loading && styles.disabledButton]}
+                    onPress={() => !loading && !isStreaming && sendMessage()}
+                    disabled={loading || isStreaming}
+                    style={[styles.sendButton, (loading || isStreaming) && styles.disabledButton]}
                 >
                     <Text style={styles.buttonText}>
-                        {loading ? 'Đang gửi...' : 'Gửi'}
+                        {loading || isStreaming ? 'Đang stream...' : 'Gửi'}
                     </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                     onPress={clearChat}
-                    disabled={loading}
-                    style={[styles.clearButton, loading && styles.disabledButton]}
+                    disabled={loading || isStreaming}
+                    style={[styles.clearButton, (loading || isStreaming) && styles.disabledButton]}
                 >
                     <Text style={styles.buttonText}>Xóa</Text>
                 </TouchableOpacity>
@@ -283,7 +381,7 @@ export default function ChatbotScreen() {
     );
 }
 
-// Tách riêng ViewStyle, TextStyle, ImageStyle
+// Styles giữ nguyên
 interface Styles {
     container: ViewStyle;
     header: ViewStyle;
@@ -428,7 +526,7 @@ const styles = StyleSheet.create<Styles>({
     },
 });
 
-// Style riêng cho Markdown
+// Markdown styles giữ nguyên
 const markdownStyles = {
     body: {
         color: '#374151',

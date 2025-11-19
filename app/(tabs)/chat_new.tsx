@@ -1,19 +1,19 @@
-import React, { useState, useRef, useEffect } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    View,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    ScrollView,
-    Image,
-    StyleSheet,
     Alert,
     Dimensions,
-    ViewStyle,
-    TextStyle,
+    Image,
     ImageStyle,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TextStyle,
+    TouchableOpacity,
+    View,
+    ViewStyle,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import MarkdownDisplay from 'react-native-markdown-display';
 
 const { width: screenWidth } = Dimensions.get('window');
