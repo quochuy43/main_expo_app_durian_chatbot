@@ -36,14 +36,6 @@ export default function MessageComponent({ message }: MessageProps) {
     if (image) {
       return (
         <View>
-          <ThemedText
-            style={[
-              styles.senderLabel,
-              isUser && styles.senderLabelUser,
-            ]}
-          >
-            {isUser ? 'Bạn:' : 'Bot:'}
-          </ThemedText>
           {text ? (
             <ThemedText
               style={[
@@ -67,7 +59,6 @@ export default function MessageComponent({ message }: MessageProps) {
     if (isBot) {
       return (
         <View>
-          <ThemedText style={styles.senderLabel}>Bot:</ThemedText>
           <MarkdownDisplay style={markdownStyles}>{text}</MarkdownDisplay>
         </View>
       );
@@ -83,9 +74,6 @@ export default function MessageComponent({ message }: MessageProps) {
 
     return (
       <View>
-        <ThemedText style={[styles.senderLabel, styles.senderLabelUser]}>
-          Bạn:
-        </ThemedText>
         <ThemedText style={[styles.messageText, styles.userText]}>
           {text}
         </ThemedText>

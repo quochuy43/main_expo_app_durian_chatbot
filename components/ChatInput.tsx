@@ -7,7 +7,6 @@ interface ChatInputProps {
   setMessage: (message: string) => void;
   sendMessage: () => void;
   pickImage: () => void;
-  clearChat: () => void;
   loading: boolean;
   hasPendingImage: boolean;
 }
@@ -17,7 +16,6 @@ export default function ChatInput({
   setMessage,
   sendMessage,
   pickImage,
-  clearChat,
   loading,
   hasPendingImage,
 }: ChatInputProps) {
@@ -72,14 +70,6 @@ export default function ChatInput({
         disabled={loading}
       >
         <Ionicons name="send" size={20} color="#ffffff" />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.iconButton, styles.clearButton, loading && styles.disabledButton]}
-        onPress={clearChat}
-        disabled={loading}
-      >
-        <Ionicons name="trash" size={20} color="#1f2937" />
       </TouchableOpacity>
     </View>
   );

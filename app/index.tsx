@@ -83,6 +83,7 @@ export default function HomeScreen() {
     });
   };
 
+  // Giữ lại useEffect này để cuộn xuống khi tin nhắn mới được thêm vào hoàn toàn
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -244,9 +245,11 @@ export default function HomeScreen() {
             msg.id === botMsg.id ? { ...msg, text: displayText } : msg,
           ),
         );
-        scrollToBottom();
         await delay(30);
       }
+
+      scrollToBottom(); 
+
     } catch (err: any) {
       console.error("Chat error:", err);
       setMessages((prev) => {
@@ -263,7 +266,7 @@ export default function HomeScreen() {
     } finally {
       clearTimeout(timeoutId);
       setLoading(false);
-      scrollToBottom();
+      scrollToBottom(); 
     }
   };
 
@@ -333,7 +336,6 @@ export default function HomeScreen() {
                 setMessage={setInputMessage}
                 sendMessage={sendMessage}
                 pickImage={handleImageUpload}
-                clearChat={clearChat}
                 loading={loading}
                 hasPendingImage={Boolean(pendingImage)}
               />
