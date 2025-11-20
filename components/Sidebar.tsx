@@ -1,17 +1,17 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, Dimensions, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
-import Animated, { 
-  useAnimatedStyle, 
-  withTiming,
-  withDelay,
-  runOnJS,
-  useSharedValue,
-} from 'react-native-reanimated';
-import type { SharedValue } from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect } from 'react';
+import { Dimensions, ImageBackground, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import type { SharedValue } from 'react-native-reanimated';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
@@ -54,11 +54,11 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
           {/* Header */}
           <ThemedView style={styles.header}>
             <Ionicons name="person-circle-outline" size={36} color={textColor} />
-            <ThemedText style={styles.userName}>Sầu Riêng AI</ThemedText>
+            <ThemedText style={styles.userName}>Durian Assistant</ThemedText>
           </ThemedView>
 
           <ImageBackground
-            source={require('@/assets/images/durian.png')} 
+            source={require('@/assets/images/durian.png')}
             resizeMode="contain"
             style={styles.imageBackground}
             imageStyle={{ opacity: 0.15, position: 'absolute', right: -50, top: 100, width: 300, height: 300 }}
