@@ -1,3 +1,5 @@
+import React from 'react';
+import { StyleSheet, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
@@ -31,6 +33,7 @@ export default function ChatInput({
   hasPendingImage,
 }: ChatInputProps) {
   const textColor = useThemeColor({}, 'text');
+  const tintColor = useThemeColor({}, 'tint');
 
   // Speech to text timer
   const formatTime = (sec: number) => {
@@ -40,7 +43,7 @@ export default function ChatInput({
   };
 
   const handleSubmit = () => {
-    if (message.trim() || hasPendingImage) {
+    if ((message.trim() || hasPendingImage) && !loading) {
       sendMessage();
     }
   };
@@ -79,7 +82,7 @@ export default function ChatInput({
         style={[
           styles.iconButton,
           styles.imageButton,
-          hasPendingImage && styles.imageButtonActive,
+          hasPendingImage && { backgroundColor: tintColor, borderColor: tintColor },
           loading && styles.disabledButton,
         ]}
         onPress={pickImage}
@@ -88,7 +91,7 @@ export default function ChatInput({
         <Ionicons
           name={hasPendingImage ? 'image' : 'image-outline'}
           size={22}
-          color={hasPendingImage ? '#ffffff' : '#2563eb'}
+          color={hasPendingImage ? '#ffffff' : tintColor}
         />
       </TouchableOpacity>
 
@@ -115,20 +118,30 @@ export default function ChatInput({
           value={message}
           onChangeText={setMessage}
           placeholder={placeholder}
-          placeholderTextColor="#6b7280"
+          placeholderTextColor="#9ca3af"
           onSubmitEditing={handleSubmit}
           multiline
           editable={!loading}
           returnKeyType="send"
+          blurOnSubmit={false} // Giữ bàn phím khi gửi (tùy chọn)
         />
       </View>
 
+      {/* Nút gửi */}
       <TouchableOpacity
-        style={[styles.iconButton, styles.sendButton, loading && styles.disabledButton]}
+        style={[
+          styles.iconButton,
+          { backgroundColor: tintColor },
+          (!message.trim() && !hasPendingImage) && styles.disabledButton,
+        ]}
         onPress={handleSubmit}
-        disabled={loading}
+        disabled={loading || (!message.trim() && !hasPendingImage)}
       >
-        <Ionicons name="send" size={20} color="#ffffff" />
+        {loading ? (
+            <ActivityIndicator size="small" color="#fff" />
+        ) : (
+            <Ionicons name="send" size={20} color="#ffffff" />
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -137,48 +150,46 @@ export default function ChatInput({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end', // Căn đáy để đẹp hơn khi input nhiều dòng
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: '#E5E5E5',
     gap: 8,
+    backgroundColor: 'transparent', // Để KeyboardAvoidingView xử lý nền
   },
   inputWrapper: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#d1d5db',
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    minHeight: 48,
+    backgroundColor: '#f9fafb',
+    paddingHorizontal: 16,
+    paddingVertical: 8, // Tăng padding dọc
+    minHeight: 44,
     maxHeight: 120,
+    justifyContent: 'center',
   },
   input: {
     flex: 1,
     fontSize: 16,
+    paddingTop: 0, // Fix lỗi padding textinput trên Android
+    paddingBottom: 0,
   },
   iconButton: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 22, // Hình tròn
     justifyContent: 'center',
     alignItems: 'center',
   },
   imageButton: {
     borderWidth: 1,
-    borderColor: '#2563eb',
-    backgroundColor: '#EEF2FF',
+    borderColor: '#d1d5db',
+    backgroundColor: '#fff',
   },
   imageButtonActive: {
-    backgroundColor: '#2563eb',
-  },
-  sendButton: {
-    backgroundColor: '#2563eb',
-  },
-  clearButton: {
-    backgroundColor: '#E5E7EB',
+    // Style này sẽ được override bởi logic trong component
   },
   disabledButton: {
     opacity: 0.5,
