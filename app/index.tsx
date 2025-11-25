@@ -32,6 +32,9 @@ export default function HomeScreen() {
   // Business Logic Hooks
   const chat = useChatLogic();
   const audio = useAudioRecorder((text) => chat.setInputMessage(text));
+  // chat: Chứa tất cả state tin nhắn, input, ảnh, và các hàm sendMessage, pickMedia.
+  // audio: Chứa state ghi âm và các hàm startRecording, stopRecording.
+  // Nối 2 Hooks: Khi useAudioRecorder nhận được văn bản từ Back-end ((text) => ...), nó lập tức gọi hàm chat.setInputMessage(text) để đưa văn bản đó vào ô nhập liệu chính của Hook useChatLogic. Đây là một ví dụ tuyệt vời về sự tương tác giữa các Hooks.
 
   // Scroll handling UI specific
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -59,7 +62,7 @@ export default function HomeScreen() {
                 <TouchableOpacity onPress={() => toggleSidebar(true)}>
                   <Ionicons name="menu" size={28} color={iconColor} />
                 </TouchableOpacity>
-                <ThemedText style={styles.headerTitle}>Durian Assistant</ThemedText>
+                <ThemedText style={styles.headerTitle}>Durian Consultant</ThemedText>
               </ThemedView>
 
               {/* Chat Body */}
@@ -101,6 +104,9 @@ export default function HomeScreen() {
                 loading={chat.loading || audio.isProcessing}
                 hasPendingImage={Boolean(chat.pendingImage)}
               />
+              {/* Tất cả các hàm và state từ 2 Hooks (chat và audio) đều được truyền xuống Component ChatInput qua các props đã được định nghĩa.
+
+              loading tổng hợp: loading={chat.loading || audio.isProcessing} đảm bảo rằng giao diện bị vô hiệu hóa khi Bot đang trả lời HOẶC âm thanh đang được xử lý (ASR). */}
             </KeyboardAvoidingView>
           </TouchableWithoutFeedback>
         </Animated.View>

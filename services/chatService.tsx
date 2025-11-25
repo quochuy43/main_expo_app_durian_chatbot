@@ -21,6 +21,10 @@ export const ChatService = {
         return response.json();
     },
 
+    // Lưu ý về as any:
+    // Trong React Native, object { uri, name, type } không đúng chuẩn Blob của web thông thường, nên TypeScript sẽ báo lỗi.
+    // Dùng as any là cách bảo TypeScript: "Tôi biết tôi đang làm gì, hãy bỏ qua lỗi này đi, React Native cần object như thế này mới gửi file được".
+
     async streamChat(
         message: string,
         userId: string,
@@ -38,7 +42,7 @@ export const ChatService = {
         const response = await fetch(`${API_URL}/chat/stream`, {
             method: "POST",
             body: formData,
-            signal,
+            signal, // Dùng để hủy request nếu cần
         });
 
         if (!response.ok) {
@@ -48,3 +52,5 @@ export const ChatService = {
         return response;
     }
 };
+
+// File này chịu trách nhiệm đóng gói dữ liệu từ Front-end và gửi sang Back-end khớp với những gì Back-end yêu cầu.
