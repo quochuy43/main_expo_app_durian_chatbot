@@ -54,7 +54,7 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
           {/* Header */}
           <ThemedView style={styles.header}>
             <Ionicons name="person-circle-outline" size={36} color={textColor} />
-            <ThemedText style={styles.userName}>Durian Assistant</ThemedText>
+            <ThemedText style={styles.userName}>Durian Consultant</ThemedText>
           </ThemedView>
 
           <ImageBackground
@@ -74,7 +74,7 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
 
           {/* Menu dưới */}
           <ThemedView style={styles.footer}>
-            <MenuItem icon="book-outline" label="Hướng dẫn" />
+            <MenuItem icon="partly-sunny-outline" label="Thời tiết" />
             <MenuItem icon="settings-outline" label="Cài đặt" />
             <MenuItem icon="help-circle-outline" label="Trợ giúp" />
             <MenuItem icon="log-out-outline" label="Đăng xuất" />

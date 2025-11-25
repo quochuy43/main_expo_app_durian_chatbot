@@ -15,6 +15,11 @@ export function useChatLogic() {
     const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
     const [loading, setLoading] = useState(false);
 
+    // messages: Mảng chính lưu trữ tất cả tin nhắn đã hiển thị (Message[]).
+    // inputMessage: Nội dung người dùng đang gõ.
+    // pendingImage: Lưu trữ ảnh đang chờ gửi (dạng PendingImage - nơi chứa URI hiển thị và file upload).
+    // loading: Boolean chỉ ra bot đang xử lý tin nhắn.
+
     // Scroll Logic
     const [isScrolledToBottom, setIsScrolledToBottom] = useState(true);
     const [userInteracted, setUserInteracted] = useState(false);
@@ -27,6 +32,9 @@ export function useChatLogic() {
     useEffect(() => {
         if (isScrolledToBottom && !userInteracted) scrollToBottom(false);
     }, [messages, isScrolledToBottom, userInteracted]);
+
+    // flatListRef: Ref (tham chiếu) đến component <FlatList> để có thể gọi các hàm trực tiếp của nó, như scrollToEnd.
+    // useEffect Cuộn: Đảm bảo sau mỗi lần messages thay đổi, nếu người dùng đang ở cuối màn hình (isScrolledToBottom = true) và chưa tương tác (!userInteracted), chat sẽ tự động cuộn xuống tin nhắn mới nhất.
 
     // Image Picker Logic
     const pickMedia = async (useCamera: boolean) => {
@@ -68,7 +76,7 @@ export function useChatLogic() {
         const hasFile = Boolean(pendingImage?.file);
         if (!textToSend && !hasFile) return;
 
-        const finalMessage = textToSend || (hasFile ? "Hãy giới thiệu về" : "");
+        const finalMessage = textToSend || (hasFile ? "Thông tin cơ bản của" : "");
         const imageFile = pendingImage?.file;
 
         // Optimistic update
@@ -159,3 +167,4 @@ export function useChatLogic() {
         sendMessage,
     };
 }
+// overrideText: Tham số này rất quan trọng. Khi người dùng ghi âm, useAudioRecorder sẽ gọi hàm này với văn bản đã được ASR xử lý, cho phép logic chat chạy mà không cần người dùng gõ.

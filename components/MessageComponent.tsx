@@ -12,14 +12,13 @@ const getMarkdownStyles = (textColor: string, tintColor: string, borderColor: st
   body: { color: textColor, fontSize: 16, lineHeight: 24 },
   code_inline: { backgroundColor: '#F3F4F6', color: tintColor, borderRadius: 4, borderWidth: 1, borderColor },
   fence: { backgroundColor: '#F3F4F6', borderWidth: 1, borderColor, padding: 12, borderRadius: 8 },
-  // ... các style khác của bạn giữ nguyên
 });
 
 // --- Sub-components ---
 const BotHeader = ({ tintColor }: { tintColor: string }) => (
   <View style={styles.botHeader}>
     <Ionicons name="sparkles" size={16} color={tintColor} style={{ marginRight: 6 }} />
-    <ThemedText style={styles.botName}>AI Assistant</ThemedText>
+    <ThemedText style={styles.botName}>Durian Consultant</ThemedText>
   </View>
 );
 

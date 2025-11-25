@@ -1,4 +1,4 @@
-const API_URL = "https://a08fb8c773d3.ngrok-free.app"; // Nên đưa vào env config
+const API_URL = "https://299ec7eb6bd1.ngrok-free.app"; // Nên đưa vào env config
 
 export const ChatService = {
     async uploadAudio(uri: string) {
@@ -20,6 +20,10 @@ export const ChatService = {
         return response.json();
     },
 
+    // Lưu ý về as any:
+    // Trong React Native, object { uri, name, type } không đúng chuẩn Blob của web thông thường, nên TypeScript sẽ báo lỗi.
+    // Dùng as any là cách bảo TypeScript: "Tôi biết tôi đang làm gì, hãy bỏ qua lỗi này đi, React Native cần object như thế này mới gửi file được".
+
     async streamChat(
         message: string,
         userId: string,
@@ -37,7 +41,7 @@ export const ChatService = {
         const response = await fetch(`${API_URL}/chat/stream`, {
             method: "POST",
             body: formData,
-            signal,
+            signal, // Dùng để hủy request nếu cần
         });
 
         if (!response.ok) {
@@ -47,3 +51,5 @@ export const ChatService = {
         return response;
     }
 };
+
+// File này chịu trách nhiệm đóng gói dữ liệu từ Front-end và gửi sang Back-end khớp với những gì Back-end yêu cầu.
