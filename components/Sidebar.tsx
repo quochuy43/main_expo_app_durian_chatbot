@@ -14,6 +14,7 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 export const SIDEBAR_WIDTH = width * 0.7;
@@ -28,6 +29,7 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
   const backgroundColor = useThemeColor({}, 'background');
   const borderColor = useThemeColor({}, 'border');
   const textColor = useThemeColor({}, 'text');
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     offset.value = withTiming(isOpen ? SIDEBAR_WIDTH : 0, { duration: 300 });
@@ -40,6 +42,11 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: offset.value - SIDEBAR_WIDTH }],
   }));
+
+  const handleLogout = async () => {
+    await logout();
+    onClose();
+  };
 
   return (
     <GestureDetector gesture={panGesture}>
@@ -54,7 +61,9 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
           {/* Header */}
           <ThemedView style={styles.header}>
             <Ionicons name="person-circle-outline" size={36} color={textColor} />
-            <ThemedText style={styles.userName}>Durian Assistant</ThemedText>
+            <ThemedText style={styles.userName}>
+              {user?.full_name || 'Durian Assistant'}
+            </ThemedText>
           </ThemedView>
 
           <ImageBackground
@@ -77,13 +86,14 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
             <MenuItem icon="book-outline" label="Hướng dẫn" />
             <MenuItem icon="settings-outline" label="Cài đặt" />
             <MenuItem icon="help-circle-outline" label="Trợ giúp" />
-            <MenuItem icon="log-out-outline" label="Đăng xuất" />
+            <MenuItem icon="log-out-outline" label="Đăng xuất" onPress={handleLogout} />
           </ThemedView>
         </SafeAreaView>
       </Animated.View>
     </GestureDetector>
   );
 }
+
 
 function SectionTitle({ title }: { title: string }) {
   const color = useThemeColor({}, 'text');
@@ -120,15 +130,16 @@ function ChatSample({ text, index, isOpen }: { text: string; index: number; isOp
   );
 }
 
-function MenuItem({ icon, label }: { icon: any; label: string }) {
+function MenuItem({ icon, label, onPress }: { icon: any; label: string; onPress?: () => void }) {
   const color = useThemeColor({}, 'text');
   return (
-    <TouchableOpacity style={styles.menuItem}>
+    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
       <Ionicons name={icon} size={22} color={color} />
       <ThemedText style={styles.menuLabel}>{label}</ThemedText>
     </TouchableOpacity>
   );
 }
+
 
 // --- Styles ---
 const styles = StyleSheet.create({

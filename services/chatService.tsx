@@ -1,4 +1,5 @@
-const API_URL = "https://a08fb8c773d3.ngrok-free.app"; // Nên đưa vào env config
+import { API_URL } from '@/constants/config';
+
 
 export const ChatService = {
     async uploadAudio(uri: string) {
