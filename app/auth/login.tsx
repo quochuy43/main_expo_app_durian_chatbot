@@ -1,22 +1,21 @@
+import { ThemedText } from '@/components/themed-text';
+import { useAuth } from '@/contexts/AuthContext';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { Ionicons } from '@expo/vector-icons';
+import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    View,
-    TextInput,
-    TouchableOpacity,
-    StyleSheet,
     ActivityIndicator,
+    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    Image,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link, router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
@@ -75,7 +74,7 @@ export default function LoginScreen() {
                             style={styles.logo}
                             resizeMode="contain"
                         />
-                        <ThemedText style={styles.title}>Durian Assistant</ThemedText>
+                        <ThemedText style={styles.title}>Durian Consultant</ThemedText>
                         <ThemedText style={styles.subtitle}>Đăng nhập để tiếp tục</ThemedText>
                     </View>
 
@@ -190,7 +189,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     title: {
-        fontSize: 28,
+        fontSize: 25,
         fontWeight: 'bold',
         marginBottom: 8,
     },

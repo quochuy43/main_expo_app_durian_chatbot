@@ -1,11 +1,11 @@
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import 'react-native-reanimated';
-import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
+import 'react-native-reanimated';
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
@@ -57,7 +57,15 @@ function RootLayoutNav() {
             headerShown: false,
           }}
         />
+        <Stack.Screen
+          name="weather"
+          options={{
+            headerShown: false,  // Hiển thị header cho weather (title tự động từ file name)
+            title: 'Thời Tiết',  // Custom title
+          }}
+        />
       </Stack>
+
       <StatusBar style="auto" />
     </ThemeProvider>
   );

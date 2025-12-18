@@ -1,12 +1,13 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { AuthService, User } from '@/services/authService';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 interface AuthContextType {
     user: User | null;
+    token?: string | null;
     isLoading: boolean;
     isAuthenticated: boolean;
     login: (email: string, password: string) => Promise<void>;
-    register: (email: string, fullName: string, password: string) => Promise<void>;
+    register: (email: string, fullName: string, province: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     error: string | null;
     clearError: () => void;
@@ -18,6 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [token, setToken] = useState<string | null>(null); // ✨ Thêm state cho token
 
     // Check for existing auth on mount
     useEffect(() => {
@@ -32,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (token) {
                 const userData = await AuthService.getCurrentUser(token);
                 setUser(userData);
+                setToken(token); // ✨ Lưu token vào state
             }
         } catch (err) {
             // If token is invalid, clear it
@@ -51,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const userData = await AuthService.getCurrentUser(response.access_token);
 
             setUser(userData);
+            setToken(response.access_token);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Đăng nhập thất bại';
             setError(errorMessage);
@@ -60,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const register = async (email: string, fullName: string, password: string) => {
+    const register = async (email: string, fullName: string, province: string, password: string) => {
         try {
             setError(null);
             setIsLoading(true);
@@ -68,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const response = await AuthService.register({
                 email,
                 full_name: fullName,
+                province,
                 password,
             });
 
@@ -102,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         <AuthContext.Provider
             value={{
                 user,
+                token,
                 isLoading,
                 isAuthenticated: !!user,
                 login,

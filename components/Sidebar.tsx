@@ -1,5 +1,7 @@
+import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Dimensions, ImageBackground, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -14,7 +16,6 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
-import { useAuth } from '@/contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 export const SIDEBAR_WIDTH = width * 0.7;
@@ -30,6 +31,7 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
   const borderColor = useThemeColor({}, 'border');
   const textColor = useThemeColor({}, 'text');
   const { user, logout } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     offset.value = withTiming(isOpen ? SIDEBAR_WIDTH : 0, { duration: 300 });
@@ -48,6 +50,16 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
     onClose();
   };
 
+  const handleWeatherPress = () => {
+    router.push('/weather');  // Navigate đến weather screen
+    onClose();  // Đóng sidebar sau khi navigate
+  };
+
+  const handleSpeechPress = () => {
+    router.push('/speech');  // Navigate đến speech screen
+    onClose();  // Đóng sidebar sau khi navigate
+  };
+
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View
@@ -62,7 +74,7 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
           <ThemedView style={styles.header}>
             <Ionicons name="person-circle-outline" size={36} color={textColor} />
             <ThemedText style={styles.userName}>
-              {user?.full_name || 'Durian Assistant'}
+              {user?.full_name || 'Durian Consultant'}
             </ThemedText>
           </ThemedView>
 
@@ -83,8 +95,8 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
 
           {/* Menu dưới */}
           <ThemedView style={styles.footer}>
-            <MenuItem icon="partly-sunny-outline" label="Thời tiết" />
-            <MenuItem icon="settings-outline" label="Cài đặt" />
+            <MenuItem icon="partly-sunny-outline" label="Thời tiết" onPress={handleWeatherPress} />
+            <MenuItem icon="settings-outline" label="Cài đặt" onPress={handleSpeechPress} />
             <MenuItem icon="help-circle-outline" label="Trợ giúp" />
             <MenuItem icon="log-out-outline" label="Đăng xuất" onPress={handleLogout} />
           </ThemedView>

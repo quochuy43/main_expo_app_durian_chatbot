@@ -1,28 +1,30 @@
+import { ThemedText } from '@/components/themed-text';
+import { useAuth } from '@/contexts/AuthContext';
+import { useThemeColor } from '@/hooks/use-theme-color';
+import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker'; // Import Picker từ thư viện
+import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    View,
-    TextInput,
-    TouchableOpacity,
-    StyleSheet,
     ActivityIndicator,
+    Alert,
+    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    Image,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link, router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function RegisterScreen() {
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [province, setProvince] = useState(''); // State mới cho tỉnh/thành phố
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [localError, setLocalError] = useState('');
@@ -31,6 +33,43 @@ export default function RegisterScreen() {
     const tintColor = useThemeColor({}, 'tint');
     const textColor = useThemeColor({}, 'text');
     const backgroundColor = useThemeColor({}, 'background');
+
+    const provinces = [
+        'An Giang',
+        'Bắc Ninh',
+        'Cà Mau',
+        'Cao Bằng',
+        'Cần Thơ',
+        'Đà Nẵng',
+        'Đắk Lắk',
+        'Điện Biên',
+        'Đồng Nai',
+        'Đồng Tháp',
+        'Gia Lai',
+        'Hà Nội',
+        'Hà Tĩnh',
+        'Hải Phòng',
+        'Hồ Chí Minh',
+        'Huế',
+        'Hưng Yên',
+        'Khánh Hoà',
+        'Lai Châu',
+        'Lạng Sơn',
+        'Lào Cai',
+        'Lâm Đồng',
+        'Nghệ An',
+        'Ninh Bình',
+        'Phú Thọ',
+        'Quảng Ngãi',
+        'Quảng Ninh',
+        'Quảng Trị',
+        'Sơn La',
+        'Tây Ninh',
+        'Thái Nguyên',
+        'Thanh Hóa',
+        'Tuyên Quang',
+        'Vĩnh Long'
+    ];
 
     const validateEmail = (email: string) => {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -57,7 +96,7 @@ export default function RegisterScreen() {
         setLocalError('');
 
         // Validation
-        if (!fullName.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
+        if (!fullName.trim() || !email.trim() || !password.trim() || !province.trim() || !confirmPassword.trim()) {
             setLocalError('Vui lòng điền đầy đủ thông tin');
             return;
         }
@@ -78,8 +117,11 @@ export default function RegisterScreen() {
         }
 
         try {
-            await register(email, fullName, password);
+            await register(email, fullName, province, password);
             // Navigation will happen automatically via _layout.tsx when auth state changes
+            Alert.alert("Đăng ký thành công!", "Mời bạn đăng nhập.");
+
+            router.replace("/auth/login");
         } catch (err) {
             // Error is already set in context
             console.error('Registration error:', err);
@@ -105,8 +147,8 @@ export default function RegisterScreen() {
                             style={styles.logo}
                             resizeMode="contain"
                         />
-                        <ThemedText style={styles.title}>Tạo Tài Khoản</ThemedText>
-                        <ThemedText style={styles.subtitle}>Tham gia Durian Assistant</ThemedText>
+                        <ThemedText style={styles.title}>Tạo tài khoản</ThemedText>
+                        <ThemedText style={styles.subtitle}>Tham gia Durian Consultant</ThemedText>
                     </View>
 
                     {/* Register Form */}
@@ -153,6 +195,28 @@ export default function RegisterScreen() {
                                     autoComplete="email"
                                     editable={!isLoading}
                                 />
+                            </View>
+                        </View>
+
+                        {/* Province Picker */}
+                        <View style={styles.inputGroup}>
+                            <ThemedText style={styles.label}>Tỉnh/Thành phố</ThemedText>
+                            <View style={styles.inputWrapper}>
+                                <Ionicons name="location-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+                                <View style={styles.pickerContainer}>
+                                    <Picker
+                                        selectedValue={province}
+                                        onValueChange={(itemValue) => setProvince(itemValue)}
+                                        style={styles.picker}
+                                        enabled={!isLoading}
+                                        dropdownIconColor="#9ca3af"
+                                    >
+                                        <Picker.Item label="Chọn tỉnh/thành phố" value="" />
+                                        {provinces.map((prov) => (
+                                            <Picker.Item key={prov} label={prov} value={prov} />
+                                        ))}
+                                    </Picker>
+                                </View>
                             </View>
                         </View>
 
@@ -287,7 +351,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     title: {
-        fontSize: 28,
+        fontSize: 25,
         fontWeight: 'bold',
         marginBottom: 8,
     },
@@ -336,6 +400,12 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 16,
         paddingVertical: 14,
+    },
+    pickerContainer: {
+        flex: 1,
+    },
+    picker: {
+        // Picker sẽ tự adjust, nhưng có thể customize thêm nếu cần (platform-specific)
     },
     eyeIcon: {
         padding: 4,
