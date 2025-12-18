@@ -1,3 +1,4 @@
+import { useAuth } from '@/contexts/AuthContext';
 import { ChatService } from "@/services/chatService";
 import { Message, PendingImage } from "@/types/chat";
 import * as ImagePicker from "expo-image-picker";
@@ -5,9 +6,9 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, FlatList } from "react-native";
 
 const generateUniqueId = () => `${Date.now()}-${Math.random()}`;
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function useChatLogic() {
+    const { token } = useAuth();
     const [messages, setMessages] = useState<Message[]>([
         { id: generateUniqueId(), sender: "bot", text: "Xin chào! Hãy gửi một tin nhắn để bắt đầu cuộc trò chuyện." },
     ]);
@@ -69,6 +70,43 @@ export function useChatLogic() {
         }
     };
 
+    const normalizeUnicode = (text: string) => {
+        try {
+            return text.normalize("NFC");
+        } catch {
+            return text;
+        }
+    };
+
+    const normalizeChunk = (prev: string, chunk: string) => {
+        let text = chunk;
+
+        // 1️⃣ Fix unicode tiếng Việt
+        text = normalizeUnicode(text);
+
+        // 2️⃣ Fix missing space
+        if (prev && !prev.endsWith(" ") && !text.startsWith(" ")) {
+            // Thêm space sau dấu câu (logic mới, ưu tiên)
+            if (
+                /[,!.?:;'"()[\]{}–—…]$/.test(prev) &&  // Kết thúc bằng dấu câu mở rộng
+                /^[a-zA-ZÀ-ỹ0-9]/.test(text)  // Bắt đầu bằng chữ/số
+            ) {
+                text = " " + text;
+            }
+            // Fallback: Thêm space giữa chữ/số nếu không phải dấu câu (để tránh dính từ)
+            else if (
+                /[a-zA-ZÀ-ỹ0-9]$/.test(prev) &&  // Prev kết thúc bằng chữ/số
+                /^[a-zA-ZÀ-ỹ0-9]/.test(text)  // Chunk bắt đầu bằng chữ/số
+            ) {
+                text = " " + text;
+            }
+        }
+
+        return text;
+    };
+
+
+
     // Send Message Logic
     const sendMessage = async (overrideText?: string) => {
         if (loading) return;
@@ -95,61 +133,70 @@ export function useChatLogic() {
         setMessages(prev => [...prev, { id: botMsgId, sender: "bot", text: "Đang suy nghĩ..." }]);
         scrollToBottom(false);
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        let fullText = "";
 
         try {
-            const response = await ChatService.streamChat(finalMessage, "user111", imageFile, controller.signal);
-            clearTimeout(timeoutId);
+            const source = await ChatService.streamChat(
+                finalMessage,
+                token ?? undefined,
+                imageFile
+            );
 
-            let fullText = "";
+            /** 2️⃣ STREAM TOKEN REAL-TIME */
+            source.addEventListener("message", (event) => {
+                const chunk = event.data as string;
+                fullText += normalizeChunk(fullText, chunk);
 
-            // Logic Stream Reader (Giữ nguyên logic phức tạp của bạn)
-            if (response.body) {
-                // @ts-ignore: React Native fetch body sometimes needs casting
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
+                setMessages(prev =>
+                    prev.map(m =>
+                        m.id === botMsgId
+                            ? { ...m, text: fullText.normalize("NFC") }
+                            : m
+                    )
+                );
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    const chunk = decoder.decode(value);
-                    fullText += chunk;
-
-                    setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, text: fullText } : m));
-                    if (isScrolledToBottom && !userInteracted) scrollToBottom(false);
-                    await delay(100);
+                if (isScrolledToBottom && !userInteracted) {
+                    scrollToBottom(false);
                 }
-            } else {
-                // Fallback Logic
-                const text = await response.text();
-                if (!text) throw new Error("Empty response");
+            });
 
-                const words = text.split(" ");
-                let currentDisplay = "";
-                let batch = "";
 
-                for (let i = 0; i < words.length; i++) {
-                    batch += (i > 0 ? " " : "") + words[i];
-                    if (i % 5 === 4 || i === words.length - 1) {
-                        currentDisplay += batch;
-                        setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, text: currentDisplay } : m));
-                        batch = "";
-                        await delay(150);
-                        if (isScrolledToBottom && !userInteracted) scrollToBottom(false);
-                    }
-                }
-            }
+
+            /** 3️⃣ END EVENT */
+            source.addEventListener("end" as any, () => {
+                source.close();
+                setLoading(false);
+                if (isScrolledToBottom) scrollToBottom(false);
+            });
+
+            /** 4️⃣ ERROR */
+            source.addEventListener("error", (err) => {
+                console.error("SSE error:", err);
+                source.close();
+
+                setMessages(prev => [
+                    ...prev.filter(m => m.id !== botMsgId),
+                    {
+                        id: generateUniqueId(),
+                        sender: "error",
+                        text: "❌ Lỗi kết nối tới máy chủ",
+                    },
+                ]);
+
+                setLoading(false);
+            });
+
         } catch (err: any) {
             console.error(err);
             setMessages(prev => [
                 ...prev.filter(m => m.id !== botMsgId),
-                { id: generateUniqueId(), sender: "error", text: "❌ Lỗi: " + (err?.message || "Unknown") }
+                {
+                    id: generateUniqueId(),
+                    sender: "error",
+                    text: "❌ Lỗi: " + (err?.message || "Unknown"),
+                },
             ]);
-        } finally {
             setLoading(false);
-            setUserInteracted(false);
-            if (isScrolledToBottom) scrollToBottom(false);
         }
     };
 

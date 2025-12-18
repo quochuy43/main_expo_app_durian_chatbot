@@ -1,11 +1,12 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_ENDPOINTS } from '@/constants/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TOKEN_KEY = '@durian_auth_token';
 
 export interface RegisterData {
     email: string;
     full_name: string;
+    province: string;
     password: string;
 }
 
@@ -18,6 +19,7 @@ export interface User {
     id: string;
     email: string;
     full_name: string;
+    province: string;
     created_at: string;
 }
 
@@ -62,7 +64,7 @@ export const AuthService = {
             console.log('Register success:', result);
 
             // Store token
-            await this.storeToken(result.access_token);
+            // await this.storeToken(result.access_token);
 
             return result;
         } catch (error) {

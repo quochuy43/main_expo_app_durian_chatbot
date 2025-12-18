@@ -3,9 +3,12 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { Message } from '@/types/chat';
 import { Ionicons } from '@expo/vector-icons';
 import React, { memo } from 'react';
-import { Image, Linking, StyleSheet, View } from 'react-native';
+import { Image, Linking, StyleSheet, TouchableOpacity, View } from 'react-native';
 import MarkdownDisplay from 'react-native-markdown-display';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+
+import { speakVietnamese, stopSpeaking } from '@/utils/speech';
+import { useSpeech } from '@/hooks/useSpeech';
 
 // --- Styles cho Markdown (Có thể tách file riêng nếu muốn) ---
 const getMarkdownStyles = (textColor: string, tintColor: string, borderColor: string) => ({
@@ -32,13 +35,16 @@ const ImageMessage = ({ uri, isPending, text }: { uri: string, isPending?: boole
 
 // --- Main Component ---
 export default memo(function MessageComponent({ message }: { message: Message }) {
-  const { sender, text, image, isPending } = message;
+  const { sender, text, image, isPending, id } = message;
   const tintColor = useThemeColor({}, 'tint');
   const userBg = useThemeColor({}, 'tint');
   const botBg = useThemeColor({ light: '#ffffff', dark: '#1E1E1E' }, 'background');
   const errorBg = useThemeColor({ light: '#FEE2E2', dark: '#450a0a' }, 'background');
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({}, 'border');
+
+  const speakingId = useSpeech();
+  const speaking = sender === 'bot' && speakingId === id;
 
   const containerStyle = [
     styles.container,
@@ -58,6 +64,35 @@ export default memo(function MessageComponent({ message }: { message: Message })
           <MarkdownDisplay style={getMarkdownStyles(textColor, tintColor, borderColor)} onLinkPress={(url) => { Linking.openURL(url); return true; }}>
             {text}
           </MarkdownDisplay>
+
+          {/* 🔊 ICON LOA */}
+          <View style={styles.speakerRow}>
+            {!speaking ? (
+              <TouchableOpacity onPress={() => speakVietnamese(id, text)}>
+                <Ionicons
+                  name="volume-medium-outline"
+                  size={20}
+                  color={tintColor}
+                />
+              </TouchableOpacity>
+            ) : (
+              <>
+                <Ionicons
+                  name="volume-high"
+                  size={20}
+                  color={tintColor}
+                />
+
+                <TouchableOpacity onPress={stopSpeaking} style={{ marginLeft: 10 }}>
+                  <Ionicons
+                    name="close-circle"
+                    size={20}
+                    color="#EF4444"
+                  />
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
         </View>
       ) : sender === 'error' ? (
         <View style={{ flexDirection: 'row' }}>
@@ -79,4 +114,11 @@ const styles = StyleSheet.create({
   messageText: { fontSize: 16, lineHeight: 24 },
   messageImage: { borderRadius: 12, width: 240, height: 180, resizeMode: 'cover', marginTop: 8 },
   pendingText: { marginTop: 6, fontSize: 12, color: '#6b7280', textAlign: 'center', fontStyle: 'italic' },
+  speakerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    alignSelf: 'flex-end',
+    gap: 8,
+  },
 });

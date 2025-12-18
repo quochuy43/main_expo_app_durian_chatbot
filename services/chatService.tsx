@@ -1,4 +1,5 @@
 import { API_URL } from '@/constants/config';
+import EventSource from "react-native-sse";
 
 
 export const ChatService = {
@@ -27,29 +28,33 @@ export const ChatService = {
 
     async streamChat(
         message: string,
-        userId: string,
-        imageFile?: any,
-        signal?: AbortSignal
+        token?: string,
+        imageFile?: any
     ) {
         const formData = new FormData();
-        formData.append("user_id", userId);
         formData.append("message", message);
 
         if (imageFile) {
             formData.append("image", imageFile);
         }
 
-        const response = await fetch(`${API_URL}/chat/stream`, {
-            method: "POST",
-            body: formData,
-            signal, // Dùng để hủy request nếu cần
-        });
+        const headers: any = {
+            Accept: "text/event-stream",
+        };
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
         }
-        return response;
+
+        const eventSource = new EventSource(
+            `${API_URL}/chat/stream`,
+            {
+                method: "POST",
+                headers,
+                body: formData,
+            }
+        );
+        return eventSource;
     }
 };
 
