@@ -22,8 +22,8 @@ function RootLayoutNav() {
       // Redirect to login if not authenticated
       router.replace('/auth/login');
     } else if (isAuthenticated && inAuthGroup) {
-      // Redirect to home if authenticated and trying to access auth screens
-      router.replace('/');
+      // Redirect to camera if authenticated and trying to access auth screens
+      router.replace('/camera');
     }
   }, [isAuthenticated, isLoading, segments]);
 
@@ -46,6 +46,18 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
+          name="camera"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="chatbot"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           name="auth/login"
           options={{
             headerShown: false,
@@ -60,8 +72,8 @@ function RootLayoutNav() {
         <Stack.Screen
           name="weather"
           options={{
-            headerShown: false,  // Hiển thị header cho weather (title tự động từ file name)
-            title: 'Thời Tiết',  // Custom title
+            headerShown: false,
+            title: 'Thời Tiết',
           }}
         />
       </Stack>

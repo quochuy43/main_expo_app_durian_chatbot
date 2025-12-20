@@ -28,10 +28,12 @@ export const ChatService = {
 
     async streamChat(
         message: string,
+        userId: string,
         token?: string,
         imageFile?: any
     ) {
         const formData = new FormData();
+        formData.append("user_id", userId);
         formData.append("message", message);
 
         if (imageFile) {

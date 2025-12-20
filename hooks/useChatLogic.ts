@@ -70,6 +70,16 @@ export function useChatLogic() {
         }
     };
 
+    // Nhận ảnh từ Camera page
+    const setInitialImage = (image: PendingImage) => {
+        setPendingImage(image);
+        // Add preview message
+        setMessages(prev => [
+            ...prev.filter(m => !m.isPending),
+            { id: generateUniqueId(), sender: "user", text: "", image: image.uri, isPending: true }
+        ]);
+    };
+
     const normalizeUnicode = (text: string) => {
         try {
             return text.normalize("NFC");
@@ -212,6 +222,7 @@ export function useChatLogic() {
         setUserInteracted,
         pickMedia,
         sendMessage,
+        setInitialImage,
     };
 }
 // overrideText: Tham số này rất quan trọng. Khi người dùng ghi âm, useAudioRecorder sẽ gọi hàm này với văn bản đã được ASR xử lý, cho phép logic chat chạy mà không cần người dùng gõ.
