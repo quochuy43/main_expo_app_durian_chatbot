@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import React, { useEffect, useState } from "react";
 import { FlatList, ImageBackground, Keyboard, KeyboardAvoidingView, NativeScrollEvent, NativeSyntheticEvent, Platform, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -17,6 +18,13 @@ import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useChatLogic } from "@/hooks/useChatLogic";
 
 export default function HomeScreen() {
+  // Get route params (image from camera page)
+  const params = useLocalSearchParams<{
+    imageUri?: string;
+    imageName?: string;
+    imageType?: string;
+  }>();
+
   // Theme & Styles
   const background = useThemeColor({}, "background");
   const iconColor = useThemeColor({}, "text");
@@ -32,9 +40,13 @@ export default function HomeScreen() {
   // Business Logic Hooks
   const chat = useChatLogic();
   const audio = useAudioRecorder((text) => chat.setInputMessage(text));
-  // chat: Chứa tất cả state tin nhắn, input, ảnh, và các hàm sendMessage, pickMedia.
-  // audio: Chứa state ghi âm và các hàm startRecording, stopRecording.
-  // Nối 2 Hooks: Khi useAudioRecorder nhận được văn bản từ Back-end ((text) => ...), nó lập tức gọi hàm chat.setInputMessage(text) để đưa văn bản đó vào ô nhập liệu chính của Hook useChatLogic. Đây là một ví dụ tuyệt vời về sự tương tác giữa các Hooks.
+
+  // Handle image from camera page
+  useEffect(() => {
+    if (params.imageUri && params.imageName && params.imageType) {
+      chat.setExternalImage(params.imageUri, params.imageName, params.imageType);
+    }
+  }, [params.imageUri, params.imageName, params.imageType]);
 
   // Scroll handling UI specific
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -79,12 +91,11 @@ export default function HomeScreen() {
                   scrollEventThrottle={16}
                   showsVerticalScrollIndicator={false}
                   keyboardDismissMode="on-drag"
-                  // --- CÁC DÒNG THÊM ĐỂ TỐI ƯU ---
-                  removeClippedSubviews={true} // Cực quan trọng: Ẩn các item đã cuộn khỏi màn hình để giải phóng RAM (Android cực cần)
-                  initialNumToRender={10}      // Chỉ render 10 tin nhắn đầu tiên khi mới mở
-                  maxToRenderPerBatch={5}      // Render thêm 5 tin mỗi khi cuộn
-                  windowSize={10}              // Giảm vùng nhớ đệm (mặc định là 21, giảm xuống 10 cho nhẹ)
-                  updateCellsBatchingPeriod={50} // Thời gian chờ giữa các lần render batch
+                  removeClippedSubviews={true}
+                  initialNumToRender={10}
+                  maxToRenderPerBatch={5}
+                  windowSize={10}
+                  updateCellsBatchingPeriod={50}
                 />
               </View>
 
@@ -104,9 +115,6 @@ export default function HomeScreen() {
                 loading={chat.loading || audio.isProcessing}
                 hasPendingImage={Boolean(chat.pendingImage)}
               />
-              {/* Tất cả các hàm và state từ 2 Hooks (chat và audio) đều được truyền xuống Component ChatInput qua các props đã được định nghĩa.
-
-              loading tổng hợp: loading={chat.loading || audio.isProcessing} đảm bảo rằng giao diện bị vô hiệu hóa khi Bot đang trả lời HOẶC âm thanh đang được xử lý (ASR). */}
             </KeyboardAvoidingView>
           </TouchableWithoutFeedback>
         </Animated.View>
