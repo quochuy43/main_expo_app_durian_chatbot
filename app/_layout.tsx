@@ -20,8 +20,10 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === 'auth';
     const inCameraPage = segments[0] === 'camera';
     const inWeatherPage = segments[0] === 'weather';
+    const inHumidityPage = segments[0] === 'humility';
+    const IrrigationHistoryPage = segments[0] === 'IrrigationHistory';
     // Root page is when not in any known route group
-    const inRootPage = !inAuthGroup && !inCameraPage && !inWeatherPage;
+    const inRootPage = !inAuthGroup && !inCameraPage && !inWeatherPage && !inHumidityPage && !IrrigationHistoryPage;
 
     if (!isAuthenticated && !inAuthGroup) {
       // Not authenticated and not on auth page -> go to login
@@ -79,6 +81,20 @@ function RootLayoutNav() {
           options={{
             headerShown: false,
             title: 'Thời Tiết',
+          }}
+        />
+        <Stack.Screen
+          name="humility"
+          options={{
+            headerShown: false,
+            title: 'Độ ẩm',
+          }}
+        />
+        <Stack.Screen
+          name="IrrigationHistory"
+          options={{
+            headerShown: false,
+            title: 'Lịch sử tưới cây',
           }}
         />
       </Stack>

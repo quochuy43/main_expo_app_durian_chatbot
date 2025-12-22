@@ -52,12 +52,12 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
 
   const handleWeatherPress = () => {
     router.push('/weather');  // Navigate đến weather screen
-    onClose();  // Đóng sidebar sau khi navigate
+    onClose(); // Đóng sidebar sau khi navigate
   };
 
-  const handleSpeechPress = () => {
-    router.push('/speech');  // Navigate đến speech screen
-    onClose();  // Đóng sidebar sau khi navigate
+  const handleHumidityPress = () => {
+    router.push('/humility');
+    onClose();
   };
 
   return (
@@ -96,8 +96,8 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
           {/* Menu dưới */}
           <ThemedView style={styles.footer}>
             <MenuItem icon="partly-sunny-outline" label="Thời tiết" onPress={handleWeatherPress} />
-            <MenuItem icon="settings-outline" label="Cài đặt" onPress={handleSpeechPress} />
-            <MenuItem icon="help-circle-outline" label="Trợ giúp" />
+            {/* <MenuItem icon="settings-outline" label="Cài đặt" /> */}
+            <MenuItem icon="water-outline" label="Độ ẩm" onPress={handleHumidityPress} />
             <MenuItem icon="log-out-outline" label="Đăng xuất" onPress={handleLogout} />
           </ThemedView>
         </SafeAreaView>

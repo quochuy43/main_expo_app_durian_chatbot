@@ -7,7 +7,6 @@ import React, { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    Button,
     Image,
     ScrollView,
     StyleSheet,
@@ -327,12 +326,6 @@ const WeatherScreen: React.FC = () => {
                     />
                 </View>
             </ScrollView>
-            <Button title="Clear Cache & Reload" onPress={async () => {
-                await AsyncStorage.removeItem(CACHE_KEY_LOCATION);
-                await AsyncStorage.removeItem(CACHE_KEY_WEATHER);
-                Alert.alert('Cache cleared!', 'Reload screen để test GPS mới.');
-                // Force reload: setLocation(null); fetchWeather(null);
-            }} />
         </LinearGradient>
     );
 };
