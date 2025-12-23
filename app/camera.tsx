@@ -1,8 +1,9 @@
+import { useTourGuide } from "@/contexts/TourGuideContext";
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Dimensions,
@@ -12,6 +13,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Tooltip from "react-native-walkthrough-tooltip";
 
 const { width, height } = Dimensions.get("window");
 
@@ -21,6 +23,39 @@ export default function CameraScreen() {
     const [facing, setFacing] = useState<CameraType>("back");
     const [permission, requestPermission] = useCameraPermissions();
     const [isCapturing, setIsCapturing] = useState(false);
+
+    // Tour Guide
+    const { shouldShowTour, currentTourScreen, setCurrentTourScreen } = useTourGuide();
+    const [tourStep, setTourStep] = useState(0);
+    const showTour = shouldShowTour && currentTourScreen === 'camera';
+
+    // Start tour when screen is ready
+    useEffect(() => {
+        if (showTour && permission?.granted) {
+            setTourStep(1);
+        }
+    }, [showTour, permission?.granted]);
+
+    const handleNextTourStep = () => {
+        if (tourStep < 3) {
+            setTourStep(tourStep + 1);
+        } else {
+            // Tour camera hoàn thành, chuyển sang chat
+            setTourStep(0);
+            setCurrentTourScreen('chat');
+        }
+    };
+
+    const handlePrevTourStep = () => {
+        if (tourStep > 1) {
+            setTourStep(tourStep - 1);
+        }
+    };
+
+    const handleEndTour = () => {
+        setTourStep(0);
+        setCurrentTourScreen(null);
+    };
 
     // Handle camera permission
     if (!permission) {
@@ -134,30 +169,108 @@ export default function CameraScreen() {
 
                 {/* Bottom Controls */}
                 <SafeAreaView style={styles.bottomBar} edges={["bottom"]}>
-                    {/* Gallery Button */}
-                    <TouchableOpacity style={styles.sideButton} onPress={pickFromGallery}>
-                        <Ionicons name="images" size={30} color="#fff" />
-                        <Text style={styles.sideButtonText}>Thư viện</Text>
-                    </TouchableOpacity>
-
-                    {/* Capture Button */}
-                    <TouchableOpacity
-                        style={[styles.captureButton, isCapturing && styles.captureButtonDisabled]}
-                        onPress={takePhoto}
-                        disabled={isCapturing}
+                    {/* Gallery Button with Tooltip */}
+                    <Tooltip
+                        isVisible={tourStep === 2}
+                        content={
+                            <View style={styles.tooltipContent}>
+                                <Text style={styles.tourStepIndicator}>Bước 2/3</Text>
+                                <Text style={styles.tooltipText}>
+                                    📁 Chọn ảnh từ thư viện của bạn
+                                </Text>
+                                <View style={styles.tourNavButtons}>
+                                    <TouchableOpacity style={styles.tourPrevButton} onPress={handlePrevTourStep}>
+                                        <Text style={styles.tourPrevButtonText}>← Quay lại</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.tourEndButton} onPress={handleEndTour}>
+                                        <Text style={styles.tourEndButtonText}>Kết thúc</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.tooltipButton} onPress={handleNextTourStep}>
+                                        <Text style={styles.tooltipButtonText}>Tiếp theo →</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        }
+                        placement="top"
+                        onClose={() => { }}
+                        backgroundColor="rgba(0,0,0,0.7)"
+                        contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
                     >
-                        {isCapturing ? (
-                            <ActivityIndicator size="small" color="#27ae60" />
-                        ) : (
-                            <View style={styles.captureInner} />
-                        )}
-                    </TouchableOpacity>
+                        <TouchableOpacity style={styles.sideButton} onPress={pickFromGallery}>
+                            <Ionicons name="images" size={30} color="#fff" />
+                            <Text style={styles.sideButtonText}>Thư viện</Text>
+                        </TouchableOpacity>
+                    </Tooltip>
 
-                    {/* Skip Button */}
-                    <TouchableOpacity style={styles.sideButton} onPress={skipToChat}>
-                        <Ionicons name="chatbubbles" size={30} color="#fff" />
-                        <Text style={styles.sideButtonText}>Bỏ qua</Text>
-                    </TouchableOpacity>
+                    {/* Capture Button with Tooltip */}
+                    <Tooltip
+                        isVisible={tourStep === 1}
+                        content={
+                            <View style={styles.tooltipContent}>
+                                <Text style={styles.tourStepIndicator}>Bước 1/3</Text>
+                                <Text style={styles.tooltipText}>
+                                    📸 Nhấn vào đây để chụp ảnh sầu riêng của bạn
+                                </Text>
+                                <View style={styles.tourNavButtons}>
+                                    <TouchableOpacity style={styles.tourEndButton} onPress={handleEndTour}>
+                                        <Text style={styles.tourEndButtonText}>Kết thúc</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.tooltipButton} onPress={handleNextTourStep}>
+                                        <Text style={styles.tooltipButtonText}>Tiếp theo →</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        }
+                        placement="top"
+                        onClose={() => { }}
+                        backgroundColor="rgba(0,0,0,0.7)"
+                        contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
+                    >
+                        <TouchableOpacity
+                            style={[styles.captureButton, isCapturing && styles.captureButtonDisabled]}
+                            onPress={takePhoto}
+                            disabled={isCapturing}
+                        >
+                            {isCapturing ? (
+                                <ActivityIndicator size="small" color="#27ae60" />
+                            ) : (
+                                <View style={styles.captureInner} />
+                            )}
+                        </TouchableOpacity>
+                    </Tooltip>
+
+                    {/* Skip Button with Tooltip */}
+                    <Tooltip
+                        isVisible={tourStep === 3}
+                        content={
+                            <View style={styles.tooltipContent}>
+                                <Text style={styles.tourStepIndicator}>Bước 3/3</Text>
+                                <Text style={styles.tooltipText}>
+                                    💬 Hoặc bỏ qua chụp ảnh để trò chuyện trực tiếp với chuyên gia sầu riêng AI
+                                </Text>
+                                <View style={styles.tourNavButtons}>
+                                    <TouchableOpacity style={styles.tourPrevButton} onPress={handlePrevTourStep}>
+                                        <Text style={styles.tourPrevButtonText}>← Quay lại</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.tourEndButton} onPress={handleEndTour}>
+                                        <Text style={styles.tourEndButtonText}>Kết thúc</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.tooltipButton} onPress={handleNextTourStep}>
+                                        <Text style={styles.tooltipButtonText}>Tiếp theo →</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        }
+                        placement="top"
+                        onClose={() => { }}
+                        backgroundColor="rgba(0,0,0,0.7)"
+                        contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
+                    >
+                        <TouchableOpacity style={styles.sideButton} onPress={skipToChat}>
+                            <Ionicons name="chatbubbles" size={30} color="#fff" />
+                            <Text style={styles.sideButtonText}>Bỏ qua</Text>
+                        </TouchableOpacity>
+                    </Tooltip>
                 </SafeAreaView>
             </CameraView>
         </View>
@@ -275,5 +388,66 @@ const styles = StyleSheet.create({
         backgroundColor: "#fff",
         borderWidth: 3,
         borderColor: "#27ae60",
+    },
+    // Tour Guide Tooltip Styles
+    tooltipContent: {
+        alignItems: "center",
+        padding: 12,
+        backgroundColor: "#fff",
+        borderRadius: 12,
+    },
+    tooltipText: {
+        color: "#333",
+        fontSize: 15,
+        textAlign: "center",
+        marginBottom: 12,
+        lineHeight: 22,
+    },
+    tooltipButton: {
+        backgroundColor: "#27ae60",
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 8,
+    },
+    tooltipButtonText: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "600",
+    },
+    // Tour Navigation Styles
+    tourStepIndicator: {
+        color: "#1a8f4a",
+        fontSize: 13,
+        fontWeight: "700",
+        marginBottom: 8,
+    },
+    tourNavButtons: {
+        flexDirection: "row",
+        gap: 8,
+        marginTop: 4,
+    },
+    tourPrevButton: {
+        backgroundColor: "#f0f0f0",
+        borderWidth: 1,
+        borderColor: "#ccc",
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+    },
+    tourPrevButtonText: {
+        color: "#333",
+        fontSize: 13,
+        fontWeight: "500",
+    },
+    tourEndButton: {
+        backgroundColor: "#ff6b6b",
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+    },
+    tourEndButtonText: {
+        color: "#fff",
+        fontSize: 13,
+        fontWeight: "500",
     },
 });
