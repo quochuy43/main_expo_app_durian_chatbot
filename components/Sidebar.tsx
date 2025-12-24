@@ -1,32 +1,42 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Dimensions, ImageBackground, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Alert, Dimensions, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import type { SharedValue } from 'react-native-reanimated';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withTiming,
+  SharedValue
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Tooltip from 'react-native-walkthrough-tooltip';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
 const { width } = Dimensions.get('window');
-export const SIDEBAR_WIDTH = width * 0.7;
+export const SIDEBAR_WIDTH = Math.floor(width * 0.7);
+
+const ONBOARDING_COMPLETED_KEY = 'onboarding_completed';
+const TOUR_GUIDE_COMPLETED_KEY = 'tour_guide_completed';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   offset: SharedValue<number>;
+  // Tour Props
+  tourStep?: number;
+  onNextTourStep?: () => void;
+  onPrevTourStep?: () => void;
+  onEndTour?: () => void;
 }
 
-export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextTourStep, onPrevTourStep, onEndTour }: SidebarProps) {
   const backgroundColor = useThemeColor({}, 'background');
   const borderColor = useThemeColor({}, 'border');
   const textColor = useThemeColor({}, 'text');
@@ -51,6 +61,32 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
   };
 
   const handleWeatherPress = () => {
+    router.push('/weather');
+    onClose();
+  };
+
+  const handleSpeechPress = () => {
+    router.push('/speech');
+    onClose();
+  };
+
+  const handleTutorialPress = () => {
+    Alert.alert(
+      'Xem hướng dẫn sử dụng',
+      'Bạn muốn xem lại hướng dẫn sử dụng ứng dụng?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xem hướng dẫn',
+          onPress: async () => {
+            await AsyncStorage.removeItem(ONBOARDING_COMPLETED_KEY);
+            await AsyncStorage.removeItem(TOUR_GUIDE_COMPLETED_KEY);
+            onClose();
+            router.replace('/onboarding');
+          },
+        },
+      ]
+    );
     router.push('/weather');  // Navigate đến weather screen
     onClose(); // Đóng sidebar sau khi navigate
   };
@@ -65,6 +101,36 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
     onClose();
   };
 
+  // Helper for Tooltip Content
+  const renderTooltipContent = (step: string, text: string, isLastStepInSidebar = false) => (
+    <View style={styles.tooltipContent}>
+      <Text style={styles.tourStepIndicator}>{step}</Text>
+      <Text style={styles.tooltipText}>{text}</Text>
+      <View style={styles.tourNavButtons}>
+        {onPrevTourStep && (
+          <TouchableOpacity style={styles.tourPrevButton} onPress={onPrevTourStep}>
+            <Text style={styles.tourPrevButtonText}>← Quay lại</Text>
+          </TouchableOpacity>
+        )}
+        {onEndTour && (
+          <TouchableOpacity style={styles.tourEndButton} onPress={onEndTour}>
+            <Text style={styles.tourEndButtonText}>Kết thúc</Text>
+          </TouchableOpacity>
+        )}
+        {onNextTourStep && (
+          <TouchableOpacity style={styles.tooltipButton} onPress={onNextTourStep}>
+            <Text style={styles.tooltipButtonText}>{isLastStepInSidebar ? "Ra Chat →" : "Tiếp theo →"}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+
+
+  const isWeatherTour = tourStep === 4;
+  const isSettingsTour = tourStep === 5;
+  const isLogoutTour = tourStep === 6;
+
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View
@@ -77,10 +143,23 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
         <SafeAreaView style={{ flex: 1 }}>
           {/* Header */}
           <ThemedView style={styles.header}>
-            <Ionicons name="person-circle-outline" size={36} color={textColor} />
-            <ThemedText style={styles.userName}>
-              {user?.full_name || 'Durian Consultant'}
-            </ThemedText>
+            {/* Tour Step 2: Account Info */}
+            <Tooltip
+              isVisible={tourStep === 2}
+              content={renderTooltipContent('Bước 2/10', '👤 Thông tin tài khoản của bạn hiển thị tại đây.')}
+              placement="bottom"
+              onClose={() => { }}
+              backgroundColor="rgba(0,0,0,0.7)"
+              contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
+              useInteractionManager={true}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor }}>
+                <Ionicons name="person-circle-outline" size={36} color={textColor} />
+                <ThemedText style={styles.userName}>
+                  {user?.full_name || 'Durian Consultant'}
+                </ThemedText>
+              </View>
+            </Tooltip>
           </ThemedView>
 
           <ImageBackground
@@ -91,15 +170,76 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
           >
             <ScrollView style={styles.chatSamples}>
               <SectionTitle title="Cuộc trò chuyện mẫu" />
-              <ChatSample text="Tác dụng của sầu riêng với sức khỏe 🍈" index={0} isOpen={isOpen} />
-              <ChatSample text="Sầu riêng nên bảo quản như thế nào?" index={1} isOpen={isOpen} />
-              <ChatSample text="Mẹo chọn sầu riêng ngon?" index={2} isOpen={isOpen} />
-              <ChatSample text="Phân biệt sầu riêng Ri6 và Monthong" index={3} isOpen={isOpen} />
+
+              {/* Tour Step 3: Chat Samples */}
+              <Tooltip
+                isVisible={tourStep === 3}
+                content={renderTooltipContent('Bước 3/10', '💡 Các cuộc trò chuyện của bạn sẽ được lưu trữ ở đây, bạn có thể tìm lại chúng dễ dàng.')}
+                placement="bottom"
+                onClose={() => { }}
+                backgroundColor="rgba(0,0,0,0.7)"
+                contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
+                useInteractionManager={true}
+              >
+                <View style={{ backgroundColor }}>
+                  <ChatSample text="Tác dụng của sầu riêng với sức khỏe 🍈" index={0} isOpen={isOpen} />
+                  <ChatSample text="Sầu riêng nên bảo quản như thế nào?" index={1} isOpen={isOpen} />
+                  <ChatSample text="Mẹo chọn sầu riêng ngon?" index={2} isOpen={isOpen} />
+                  <ChatSample text="Phân biệt sầu riêng Ri6 và Monthong" index={3} isOpen={isOpen} />
+                </View>
+              </Tooltip>
             </ScrollView>
           </ImageBackground>
 
+
           {/* Menu dưới */}
           <ThemedView style={styles.footer}>
+            {/* Tour Step 4: Weather */}
+            <Tooltip
+              isVisible={isWeatherTour}
+              content={renderTooltipContent('Bước 4/10', '☀️ Xem dự báo thời tiết chuyên sâu cho khu vực trồng sầu riêng của bạn.')}
+              placement="top"
+              onClose={() => { }}
+              backgroundColor="rgba(0,0,0,0.7)"
+              contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
+              useInteractionManager={true}
+            >
+              <View style={{ backgroundColor, width: '100%' }}>
+                <MenuItem icon="partly-sunny-outline" label="Thời tiết" onPress={handleWeatherPress} />
+              </View>
+            </Tooltip>
+
+            <MenuItem icon="book-outline" label="Hướng dẫn sử dụng" onPress={handleTutorialPress} />
+
+            {/* Tour Step 5: Settings */}
+            <Tooltip
+              isVisible={isSettingsTour}
+              content={renderTooltipContent('Bước 5/10', '⚙️ Cài đặt các tùy chỉnh ở đây.', false)}
+              placement="top"
+              onClose={() => { }}
+              backgroundColor="rgba(0,0,0,0.7)"
+              contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
+              useInteractionManager={true}
+            >
+              <View style={{ backgroundColor, width: '100%' }}>
+                <MenuItem icon="settings-outline" label="Cài đặt" onPress={handleSpeechPress} />
+              </View>
+            </Tooltip>
+
+            {/* Tour Step 6: Logout */}
+            <Tooltip
+              isVisible={isLogoutTour}
+              content={renderTooltipContent('Bước 6/10', '🚪 Đăng xuất khỏi tài khoản của bạn.', true)}
+              placement="top"
+              onClose={() => { }}
+              backgroundColor="rgba(0,0,0,0.7)"
+              contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
+              useInteractionManager={true}
+            >
+              <View style={{ backgroundColor, width: '100%' }}>
+                <MenuItem icon="log-out-outline" label="Đăng xuất" onPress={handleLogout} />
+              </View>
+            </Tooltip>
             <MenuItem icon="newspaper-outline" label="Blog" onPress={handleBlogPress} />
             <MenuItem icon="water-outline" label="Độ ẩm đất" onPress={handleHumidityPress} />
             <MenuItem icon="partly-sunny-outline" label="Thời tiết" onPress={handleWeatherPress} />
@@ -119,8 +259,8 @@ function SectionTitle({ title }: { title: string }) {
 
 function ChatSample({ text, index, isOpen }: { text: string; index: number; isOpen: boolean }) {
   const color = useThemeColor({}, 'text');
-  const opacity = useSharedValue(0);
-  const translateX = useSharedValue(-20);
+  const opacity = useSharedValue(isOpen ? 1 : 0);
+  const translateX = useSharedValue(isOpen ? 0 : -20);
 
   useEffect(() => {
     if (isOpen) {
@@ -147,10 +287,10 @@ function ChatSample({ text, index, isOpen }: { text: string; index: number; isOp
   );
 }
 
-function MenuItem({ icon, label, onPress }: { icon: any; label: string; onPress?: () => void }) {
+function MenuItem({ icon, label, onPress, style }: { icon: any; label: string; onPress?: () => void; style?: any }) {
   const color = useThemeColor({}, 'text');
   return (
-    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
+    <TouchableOpacity style={[styles.menuItem, style]} onPress={onPress}>
       <Ionicons name={icon} size={22} color={color} />
       <ThemedText style={styles.menuLabel}>{label}</ThemedText>
     </TouchableOpacity>
@@ -228,6 +368,67 @@ const styles = StyleSheet.create({
   menuLabel: {
     fontSize: 16,
     marginLeft: 14,
+    fontWeight: '500',
+  },
+  // Tour Guide Styles
+  tooltipContent: {
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    minWidth: 200,
+  },
+  tooltipText: {
+    color: '#333',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  tooltipButton: {
+    backgroundColor: '#27ae60',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  tooltipButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  tourStepIndicator: {
+    color: '#1a8f4a',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  tourNavButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  tourPrevButton: {
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  tourPrevButtonText: {
+    color: '#333',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  tourEndButton: {
+    backgroundColor: '#ff6b6b',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  tourEndButtonText: {
+    color: '#fff',
+    fontSize: 12,
     fontWeight: '500',
   },
 });

@@ -1,23 +1,42 @@
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { TourGuideProvider } from '@/contexts/TourGuideContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
+
+const ONBOARDING_COMPLETED_KEY = 'onboarding_completed';
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
-  const hasRedirectedToCamera = useRef(false);
+  const hasNavigated = useRef(false);
+  const [onboardingStatus, setOnboardingStatus] = useState<'loading' | 'completed' | 'not_completed'>('loading');
+
+  // Check onboarding status from AsyncStorage
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        const completed = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
+        setOnboardingStatus(completed === 'true' ? 'completed' : 'not_completed');
+      } catch (error) {
+        setOnboardingStatus('not_completed');
+      }
+    };
+    checkOnboardingStatus();
+  }, []);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || onboardingStatus === 'loading') return;
 
     const inAuthGroup = segments[0] === 'auth';
+    const inOnboardingPage = segments[0] === 'onboarding';
     const inCameraPage = segments[0] === 'camera';
     const inWeatherPage = segments[0] === 'weather';
     const inHumidityPage = segments[0] === 'humility';
@@ -28,22 +47,32 @@ function RootLayoutNav() {
     const inRootPage = !inAuthGroup && !inCameraPage && !inWeatherPage && !inHumidityPage && !IrrigationHistoryPage && !inBlogPage;
 
     if (!isAuthenticated && !inAuthGroup) {
-      // Not authenticated and not on auth page -> go to login
-      hasRedirectedToCamera.current = false;
+      // Not authenticated -> go to login
+      hasNavigated.current = false;
       router.replace('/auth/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      // Just authenticated from auth page -> go to camera
-      hasRedirectedToCamera.current = true;
-      router.replace('/camera');
-    } else if (isAuthenticated && inRootPage && !hasRedirectedToCamera.current) {
-      // Authenticated and landing on root without going through camera first -> go to camera
-      hasRedirectedToCamera.current = true;
-      router.replace('/camera');
+    } else if (isAuthenticated && inAuthGroup && !hasNavigated.current) {
+      // Just authenticated from auth page
+      hasNavigated.current = true;
+      if (onboardingStatus === 'completed') {
+        // User đã hoàn thành onboarding trước đó -> go to camera
+        router.replace('/camera');
+      } else {
+        // User chưa hoàn thành onboarding -> go to onboarding
+        router.replace('/onboarding');
+      }
+    } else if (isAuthenticated && inRootPage && !hasNavigated.current) {
+      // Authenticated and on root page (app restart)
+      hasNavigated.current = true;
+      if (onboardingStatus === 'completed') {
+        router.replace('/camera');
+      } else {
+        router.replace('/onboarding');
+      }
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, segments, onboardingStatus]);
 
-  // Show loading screen while checking auth
-  if (isLoading) {
+  // Show loading screen while checking auth or onboarding status
+  if (isLoading || onboardingStatus === 'loading') {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" />
@@ -56,6 +85,12 @@ function RootLayoutNav() {
       <Stack>
         <Stack.Screen
           name="index"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="onboarding"
           options={{
             headerShown: false,
           }}
@@ -116,7 +151,11 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <TourGuideProvider>
+        <RootLayoutNav />
+      </TourGuideProvider>
     </AuthProvider>
   );
 }
+
+

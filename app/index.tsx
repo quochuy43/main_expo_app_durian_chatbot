@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { FlatList, ImageBackground, Keyboard, KeyboardAvoidingView, NativeScrollEvent, NativeSyntheticEvent, Platform, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
+import { FlatList, ImageBackground, Keyboard, KeyboardAvoidingView, NativeScrollEvent, NativeSyntheticEvent, Platform, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Tooltip from "react-native-walkthrough-tooltip";
 
 
 import ChatInput from "@/components/ChatInput";
@@ -13,6 +14,7 @@ import Sidebar, { SIDEBAR_WIDTH } from "@/components/Sidebar";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 
+import { useTourGuide } from "@/contexts/TourGuideContext";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { useChatLogic } from "@/hooks/useChatLogic";
@@ -41,6 +43,55 @@ export default function HomeScreen() {
   const chat = useChatLogic();
   const audio = useAudioRecorder((text) => chat.setInputMessage(text));
 
+  // Tour Guide
+  const { shouldShowTour, currentTourScreen, completeTour } = useTourGuide();
+  const [tourStep, setTourStep] = useState(0);
+  const showTour = shouldShowTour && currentTourScreen === 'chat';
+
+  // Start tour when navigating from camera
+  useEffect(() => {
+    if (showTour) {
+      setTourStep(1);
+    }
+  }, [showTour]);
+
+  // Handle auto-open/close Sidebar during tour
+  useEffect(() => {
+    if (showTour) {
+      if (tourStep >= 2 && tourStep <= 6) {
+        // Open Sidebar for Steps 2 to 6 (Account -> Logout)
+        if (!isSidebarOpen) toggleSidebar(true);
+      } else if (tourStep >= 7) {
+        // Close Sidebar when moving to Step 7 (Chat Body)
+        if (isSidebarOpen) toggleSidebar(false);
+      }
+    }
+  }, [tourStep, showTour]);
+
+  const handleNextTourStep = () => {
+    // Total 10 steps
+    if (tourStep < 10) {
+      setTourStep(tourStep + 1);
+    } else {
+      // Tour hoàn thành
+      setTourStep(0);
+      completeTour();
+    }
+  };
+
+  const handlePrevTourStep = () => {
+    if (tourStep > 1) {
+      setTourStep(tourStep - 1);
+    }
+  };
+
+  const handleEndTour = () => {
+    setTourStep(0);
+    // Ensure sidebar closes if ending tour early
+    if (isSidebarOpen) toggleSidebar(false);
+    completeTour();
+  };
+
   // Handle image from camera page
   useEffect(() => {
     if (params.imageUri && params.imageName && params.imageType) {
@@ -63,7 +114,17 @@ export default function HomeScreen() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1, backgroundColor: background }} edges={["top", "left", "right", "bottom"]}>
-        <Sidebar isOpen={isSidebarOpen} onClose={() => toggleSidebar(false)} offset={sidebarOffset} />
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={() => toggleSidebar(false)}
+          offset={sidebarOffset}
+
+          // Tour Props
+          tourStep={tourStep}
+          onNextTourStep={handleNextTourStep}
+          onPrevTourStep={handlePrevTourStep}
+          onEndTour={handleEndTour}
+        />
 
         <Animated.View style={[{ flex: 1 }, mainAnimatedStyle]}>
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -71,13 +132,38 @@ export default function HomeScreen() {
 
               {/* Header */}
               <ThemedView style={styles.header}>
-                <TouchableOpacity onPress={() => toggleSidebar(true)}>
-                  <Ionicons name="menu" size={28} color={iconColor} />
-                </TouchableOpacity>
+                {/* Tour Step 1: Menu Button */}
+                <Tooltip
+                  isVisible={tourStep === 1}
+                  content={
+                    <View style={styles.tooltipContent}>
+                      <Text style={styles.tourStepIndicator}>Bước 1/10 - Menu</Text>
+                      <Text style={styles.tooltipText}>
+                        📂 Mở menu để xem thêm các tính năng như thời tiết, mẫu câu hỏi và cài đặt...
+                      </Text>
+                      <View style={styles.tourNavButtons}>
+                        <TouchableOpacity style={styles.tourEndButton} onPress={handleEndTour}>
+                          <Text style={styles.tourEndButtonText}>Kết thúc</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.tooltipButton} onPress={handleNextTourStep}>
+                          <Text style={styles.tooltipButtonText}>Mở Menu →</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  }
+                  placement="bottom"
+                  onClose={() => { }}
+                  backgroundColor="rgba(0,0,0,0.7)"
+                  contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
+                >
+                  <TouchableOpacity onPress={() => toggleSidebar(true)}>
+                    <Ionicons name="menu" size={28} color={iconColor} />
+                  </TouchableOpacity>
+                </Tooltip>
                 <ThemedText style={styles.headerTitle}>Durian Consultant</ThemedText>
               </ThemedView>
 
-              {/* Chat Body */}
+              {/* Chat Body - No Tooltip wrapper for large container */}
               <View style={styles.chatContainer}>
                 <ImageBackground source={require("@/assets/images/durian.png")} resizeMode="contain" style={styles.bgImage} imageStyle={styles.bgImageStyle} />
 
@@ -97,24 +183,56 @@ export default function HomeScreen() {
                   windowSize={10}
                   updateCellsBatchingPeriod={50}
                 />
+
+                {/* Tour Step 7: Chat Screen (Former Step 5) */}
+                {tourStep === 7 && (
+                  <View style={styles.tourOverlay}>
+                    <View style={styles.tourCard}>
+                      <Text style={styles.tourStepIndicator}>Bước 7/10 - Trang Chat</Text>
+                      <Text style={styles.tourCardText}>
+                        💬 Đây là nơi hiển thị cuộc trò chuyện với AI chuyên gia sầu riêng.
+                      </Text>
+                      <View style={styles.tourNavButtons}>
+                        <TouchableOpacity style={styles.tourPrevButton} onPress={handlePrevTourStep}>
+                          <Text style={styles.tourPrevButtonText}>← Quay lại</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.tourEndButton} onPress={handleEndTour}>
+                          <Text style={styles.tourEndButtonText}>Kết thúc</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.tooltipButton} onPress={handleNextTourStep}>
+                          <Text style={styles.tooltipButtonText}>Tiếp →</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                )}
               </View>
 
               {/* Chat Input */}
-              <ChatInput
-                message={chat.inputMessage}
-                setMessage={chat.setInputMessage}
-                onSend={() => chat.sendMessage()}
-                onPickImage={() => chat.pickMedia(false)}
-                onPickCamera={() => chat.pickMedia(true)}
-                audio={{
-                  isRecording: Boolean(audio.recording),
-                  seconds: audio.seconds,
-                  start: audio.startRecording,
-                  stop: audio.stopRecording
-                }}
-                loading={chat.loading || audio.isProcessing}
-                hasPendingImage={Boolean(chat.pendingImage)}
-              />
+              <View>
+                <ChatInput
+                  message={chat.inputMessage}
+                  setMessage={chat.setInputMessage}
+                  onSend={() => chat.sendMessage()}
+                  onPickImage={() => chat.pickMedia(false)}
+                  onPickCamera={() => chat.pickMedia(true)}
+                  audio={{
+                    isRecording: Boolean(audio.recording),
+                    seconds: audio.seconds,
+                    start: audio.startRecording,
+                    stop: audio.stopRecording
+                  }}
+                  loading={chat.loading || audio.isProcessing}
+                  hasPendingImage={Boolean(chat.pendingImage)}
+
+                  // Tour props
+                  tourStep={tourStep}
+                  onNextTourStep={handleNextTourStep}
+                  onPrevTourStep={handlePrevTourStep}
+                  onEndTour={handleEndTour}
+                />
+
+              </View>
             </KeyboardAvoidingView>
           </TouchableWithoutFeedback>
         </Animated.View>
@@ -136,4 +254,92 @@ const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,1)", zIndex: 150 },
   bgImage: { position: "absolute", top: "50%", left: "50%", transform: [{ translateX: -150 }, { translateY: -150 }], width: 300, height: 300, opacity: 0.2, zIndex: 0 },
   bgImageStyle: { width: "100%", height: "100%" },
+  // Tour Guide Tooltip Styles
+  tooltipContent: {
+    alignItems: "center",
+    padding: 12,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+  },
+  tooltipText: {
+    color: "#333",
+    fontSize: 15,
+    textAlign: "center",
+    marginBottom: 12,
+    lineHeight: 22,
+  },
+  tooltipButton: {
+    backgroundColor: "#27ae60",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  tooltipButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  // Tour Overlay Styles (for large containers)
+  tourOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 200,
+  },
+  tourCard: {
+    backgroundColor: "#ffffff",
+    padding: 20,
+    borderRadius: 16,
+    marginHorizontal: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  tourCardText: {
+    color: "#333",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 16,
+    lineHeight: 24,
+  },
+  // Tour Navigation Styles
+  tourStepIndicator: {
+    color: "#1a8f4a",
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  tourNavButtons: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 4,
+  },
+  tourPrevButton: {
+    backgroundColor: "#f0f0f0",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  tourPrevButtonText: {
+    color: "#333",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  tourEndButton: {
+    backgroundColor: "#ff6b6b",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  tourEndButtonText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "500",
+  },
 });
