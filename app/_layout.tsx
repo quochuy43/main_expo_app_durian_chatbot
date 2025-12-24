@@ -39,7 +39,12 @@ function RootLayoutNav() {
     const inOnboardingPage = segments[0] === 'onboarding';
     const inCameraPage = segments[0] === 'camera';
     const inWeatherPage = segments[0] === 'weather';
-    const inRootPage = !inAuthGroup && !inCameraPage && !inWeatherPage && !inOnboardingPage;
+    const inHumidityPage = segments[0] === 'humility';
+    const IrrigationHistoryPage = segments[0] === 'IrrigationHistory';
+    const inBlogPage = segments[0] === 'inblog';
+
+    // Root page is when not in any known route group
+    const inRootPage = !inAuthGroup && !inCameraPage && !inWeatherPage && !inHumidityPage && !IrrigationHistoryPage && !inBlogPage;
 
     if (!isAuthenticated && !inAuthGroup) {
       // Not authenticated -> go to login
@@ -113,6 +118,27 @@ function RootLayoutNav() {
           options={{
             headerShown: false,
             title: 'Thời Tiết',
+          }}
+        />
+        <Stack.Screen
+          name="humility"
+          options={{
+            headerShown: false,
+            title: 'Độ ẩm',
+          }}
+        />
+        <Stack.Screen
+          name="IrrigationHistory"
+          options={{
+            headerShown: false,
+            title: 'Lịch sử tưới cây',
+          }}
+        />
+        <Stack.Screen
+          name="inblog"
+          options={{
+            headerShown: false,
+            title: 'Blog',
           }}
         />
       </Stack>

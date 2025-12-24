@@ -1,20 +1,30 @@
 import { WEATHER_API_KEY } from '@/constants/config';
-import { Ionicons } from '@expo/vector-icons'; // Nếu dùng cho icon bổ sung
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient'; // Cài bằng: npx expo install expo-linear-gradient
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import React, { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    Button,
     Image,
     ScrollView,
     StyleSheet,
     Text,
-    View
+    View,
+    TouchableOpacity,
+    Dimensions,
 } from 'react-native';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withSpring,
+    withTiming,
+    FadeIn,
+    FadeOut,
+} from 'react-native-reanimated'; // Cài bằng: npx expo install react-native-reanimated
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CACHE_KEY_WEATHER = 'weather_cache';
 const CACHE_KEY_LOCATION = 'user_location';
 const CACHE_DURATION = 10 * 60 * 1000; // 10 phút
@@ -125,6 +135,15 @@ const VIETNAM_CITY_NAMES: Record<string, string> = {
     'Bentre': 'Bến Tre'
 };
 
+// Thêm mẹo cho nông dân trồng sầu riêng dựa trên thời tiết
+const DURAN_FARMER_TIPS: Record<string, string> = {
+    'rain': 'Mưa vừa phải: Thời gian lý tưởng để tưới nước cho cây sầu riêng. Tránh ngập úng!',
+    'clouds': 'Trời nhiều mây: Giảm tưới nước, theo dõi sâu bệnh vì độ ẩm cao.',
+    'clear': 'Trời nắng: Tăng tưới nước vào buổi sáng/tối để tránh cháy lá.',
+    'thunderstorm': 'Giông bão: Bảo vệ cây non, kiểm tra hệ thống thoát nước.',
+    'default': 'Theo dõi thời tiết hàng ngày để chăm sóc vườn sầu riêng hiệu quả.',
+};
+
 const translateAndTitleCase = (englishDescription: string): string => {
     const normalizedDescription = englishDescription.toLowerCase();
 
@@ -142,11 +161,34 @@ const getDisplayCityName = (apiName: string): string => {
     return VIETNAM_CITY_NAMES[apiName] || apiName;
 };
 
+const getFarmerTip = (mainType: string): string => {
+    return DURAN_FARMER_TIPS[mainType.toLowerCase()] || DURAN_FARMER_TIPS.default;
+};
+
 const WeatherScreen: React.FC = () => {
     const [data, setData] = useState<WeatherData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+
+    // Animation values
+    const tempScale = useSharedValue(0.8);
+    const iconOpacity = useSharedValue(0);
+
+    React.useEffect(() => {
+        if (data) {
+            tempScale.value = withSpring(1, { damping: 10 });
+            iconOpacity.value = withTiming(1, { duration: 1000 });
+        }
+    }, [data]);
+
+    const animatedTempStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: tempScale.value }],
+    }));
+
+    const animatedIconStyle = useAnimatedStyle(() => ({
+        opacity: iconOpacity.value,
+    }));
 
     // Hàm lấy location từ GPS hoặc cache
     const getLocation = useCallback(async (): Promise<{ latitude: number; longitude: number } | null> => {
@@ -243,19 +285,29 @@ const WeatherScreen: React.FC = () => {
 
     if (loading) {
         return (
-            <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#fff" />
-                <Text style={styles.loadingText}>Đang tải thời tiết...</Text>
-            </View>
+            <LinearGradient colors={['#4A90E2', '#50C9C3']} style={styles.container}>
+                <View style={styles.centerContainer}>
+                    <ActivityIndicator size="large" color="#fff" />
+                    <Text style={styles.loadingText}>Đang tải thời tiết cho vườn sầu riêng...</Text>
+                </View>
+            </LinearGradient>
         );
     }
 
     if (error || !data) {
         return (
-            <View style={styles.centerContainer}>
-                <Ionicons name="cloud-offline-outline" size={80} color="#fff" />
-                <Text style={styles.errorText}>Lỗi tải dữ liệu: {error}</Text>
-            </View>
+            <LinearGradient colors={['#4A90E2', '#50C9C3']} style={styles.container}>
+                <View style={styles.centerContainer}>
+                    <Ionicons name="cloud-offline-outline" size={80} color="#fff" />
+                    <Text style={styles.errorText}>Lỗi tải dữ liệu: {error}</Text>
+                    <TouchableOpacity
+                        style={styles.retryButton}
+                        onPress={() => fetchWeather(location)}
+                    >
+                        <Text style={styles.retryButtonText}>Thử lại</Text>
+                    </TouchableOpacity>
+                </View>
+            </LinearGradient>
         );
     }
 
@@ -263,76 +315,108 @@ const WeatherScreen: React.FC = () => {
     const currentWeather = weather[0];
     const iconUrl = `http://openweathermap.org/img/wn/${currentWeather.icon}@2x.png`; // Icon lớn hơn
 
-    // Dynamic gradient dựa trên weather.main (khớp screenshot: Clouds → xám-xanh)
+    // Dynamic gradient dựa trên weather.main (thêm tông xanh lá cho nông nghiệp)
     const getGradientColors = (mainType: string): string[] => {
         switch (mainType.toLowerCase()) {
-            case 'clear': return ['#ff7a59', '#FEB47B', '#c7c703'];
-            case 'clouds': return ['#918C7F', '#676D92', '#063E80'];
-            case 'rain': return ['#4A90E2', '#50C9C3', '#A8E6CF'];
-            case 'thunderstorm': return ['#2C3E50', '#34495E', '#7F8C8D'];
-            default: return ['#918C7F', '#676D92', '#063E80'];
+            case 'clear': return ['#56ab2f', '#a8e6cf', '#dcedc1']; // Xanh lá tươi cho nắng
+            case 'clouds': return ['#a8a8a8', '#c6c6c6', '#e0e0e0']; // Xám nhạt cho mây
+            case 'rain': return ['#4A90E2', '#50C9C3', '#A8E6CF']; // Xanh dương cho mưa
+            case 'thunderstorm': return ['#2C3E50', '#34495E', '#7F8C8D']; // Tối cho giông
+            default: return ['#56ab2f', '#a8e6cf', '#dcedc1'];
         }
     };
     const gradientColors = getGradientColors(currentWeather.main);
 
-    const displayCity = getDisplayCityName(name)
+    const displayCity = getDisplayCityName(name);
+    const farmerTip = getFarmerTip(currentWeather.main);
 
     return (
         <LinearGradient colors={gradientColors} style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-                {/* Header: Vị trí */}
-                <View style={styles.locationHeader}>
-                    <Text style={styles.cityText}>{displayCity}, Việt Nam</Text>
+                {/* Header: Vị trí với animation fade in */}
+                <Animated.View entering={FadeIn.duration(800).delay(200)} style={styles.locationHeader}>
+                    <View style={styles.cityContainer}>
+                        <Ionicons name="location-outline" size={28} color="#fff" />
+                        <Text style={styles.cityText}>{displayCity}, Việt Nam</Text>
+                    </View>
                     <Text style={styles.dateText}>
                         {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                     </Text>
-                </View>
+                </Animated.View>
 
-                {/* Main Weather */}
-                <View style={styles.mainWeather}>
+                {/* Main Weather với animation */}
+                <Animated.View style={[styles.mainWeather, animatedIconStyle]}>
                     <Image source={{ uri: iconUrl }} style={styles.weatherIcon} />
-                    <Text style={styles.temperature}>{Math.round(main.temp)}°</Text>
+                    <Animated.Text style={[styles.temperature, animatedTempStyle]}>
+                        {Math.round(main.temp)}°
+                    </Animated.Text>
                     <Text style={styles.description}>{translateAndTitleCase(currentWeather.description)}</Text>
-                </View>
+                </Animated.View>
 
-                {/* Details Grid */}
-                <View style={styles.detailsContainer}>
-                    <DetailItem
-                        icon="water-outline"
-                        label="Độ ẩm"
-                        value={`${main.humidity}%`}
-                        description={`${clouds.all}% mây che phủ`}
-                    />
-                    <DetailItem
-                        icon="speedometer-outline"
-                        label="Gió"
-                        value={`${wind.speed} m/s`}
-                        description={`${wind.deg}°`}
-                    />
-                    <DetailItem
-                        icon="eye-outline"
-                        label="Tầm nhìn"
-                        value={`${visibility / 1000} km`}
-                    />
-                    <DetailItem
-                        icon="bar-chart-outline"
-                        label="Áp suất"
-                        value={`${main.pressure} hPa`}
-                    />
-                    <DetailItem
-                        icon="thermometer-outline"
-                        label="Min/Max"
-                        value={`${Math.round(main.temp_min)}° / ${Math.round(main.temp_max)}°`}
-                    />
-                </View>
+                {/* Mẹo cho nông dân */}
+                <Animated.View entering={FadeIn.duration(1000).delay(400)} style={styles.tipContainer}>
+                    <Ionicons name="bulb-outline" size={24} color="#56ab2f" />
+                    <View style={styles.tipContent}>
+                        <Text style={styles.tipTitle}>Mẹo cho vườn sầu riêng</Text>
+                        <Text style={styles.tipText}>{farmerTip}</Text>
+                    </View>
+                </Animated.View>
+
+                {/* Details Grid với shadow và animation */}
+                <Animated.View entering={FadeIn.duration(1200).delay(600)} style={styles.detailsContainer}>
+                    {[
+                        {
+                            icon: "water-outline",
+                            label: "Độ ẩm",
+                            value: `${main.humidity}%`,
+                            description: `${clouds.all}% mây che phủ`,
+                        },
+                        {
+                            icon: "speedometer-outline",
+                            label: "Gió",
+                            value: `${wind.speed} m/s`,
+                            description: `${wind.deg}°`,
+                        },
+                        {
+                            icon: "eye-outline",
+                            label: "Tầm nhìn",
+                            value: `${visibility / 1000} km`,
+                        },
+                        {
+                            icon: "bar-chart-outline",
+                            label: "Áp suất",
+                            value: `${main.pressure} hPa`,
+                        },
+                        {
+                            icon: "thermometer-outline",
+                            label: "Cảm giác",
+                            value: `${Math.round(main.feels_like)}°`,
+                        },
+                        {
+                            icon: "swap-vertical-outline",
+                            label: "Min/Max",
+                            value: `${Math.round(main.temp_min)}° / ${Math.round(main.temp_max)}°`,
+                        },
+                    ].map((item, index) => (
+                        <DetailItem
+                            key={item.label}
+                            icon={item.icon}
+                            label={item.label}
+                            value={item.value}
+                            description={item.description}
+                            delay={index * 100}
+                        />
+                    ))}
+                </Animated.View>
+
+                {/* Footer với nút refresh */}
+                <Animated.View entering={FadeIn.duration(1500).delay(800)} style={styles.footer}>
+                    <TouchableOpacity style={styles.refreshButton} onPress={() => fetchWeather(location)}>
+                        <Ionicons name="refresh-outline" size={20} color="#e9ffdf" />
+                        <Text style={styles.refreshButtonText}>Cập nhật thời tiết</Text>
+                    </TouchableOpacity>
+                </Animated.View>
             </ScrollView>
-            <Button title="Clear Cache & Reload" onPress={async () => {
-                await AsyncStorage.removeItem(CACHE_KEY_LOCATION);
-                await AsyncStorage.removeItem(CACHE_KEY_WEATHER);
-                Alert.alert('Cache cleared!', 'Reload screen để test GPS mới.');
-                // Force reload: setLocation(null); fetchWeather(null);
-            }} />
         </LinearGradient>
     );
 };
@@ -340,23 +424,28 @@ const WeatherScreen: React.FC = () => {
 // Type này thường được export từ thư viện
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
-// Sub-component cho detail items
+// Sub-component cho detail items với animation
 const DetailItem: React.FC<{
     icon: IoniconsName;
     label: string;
     value: string;
     description?: string;
-}> = ({ icon, label, value, description }) => (
-    <View style={styles.detailItem}>
-        <Ionicons name={icon} size={24} color="#fff" />
+    delay?: number;
+}> = ({ icon, label, value, description, delay = 0 }) => (
+    <Animated.View
+        entering={FadeIn.duration(500).delay(delay)}
+        style={styles.detailItem}
+    >
+        <View style={styles.iconContainer}>
+            <Ionicons name={icon} size={24} color="#56ab2f" />
+        </View>
         <View style={styles.detailText}>
             <Text style={styles.detailLabel}>{label}</Text>
             {description && <Text style={styles.detailDesc}>{description}</Text>}
         </View>
         <Text style={styles.detailValue}>{value}</Text>
-    </View>
+    </Animated.View>
 );
-
 
 const styles = StyleSheet.create({
     container: {
@@ -371,96 +460,179 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#4facfe',
+        backgroundColor: 'transparent',
     },
     loadingText: {
         color: '#fff',
         marginTop: 10,
-        fontSize: 16,
+        fontSize: 18,
+        textAlign: 'center',
+        fontWeight: '500',
     },
     errorText: {
         color: '#fff',
         marginTop: 10,
         fontSize: 16,
         textAlign: 'center',
+        marginBottom: 20,
+    },
+    retryButton: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 25,
+    },
+    retryButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
     },
     locationHeader: {
         alignItems: 'center',
         marginTop: 50,
         marginBottom: 10,
     },
+    cityContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     cityText: {
-        fontSize: 34,
+        fontSize: 32,
         fontWeight: 'bold',
         color: '#fff',
-        letterSpacing: 1,
+        letterSpacing: 0.5,
+        marginLeft: 8,
     },
     dateText: {
         fontSize: 16,
         color: 'rgba(255,255,255,0.8)',
-        marginTop: 5,
+        marginTop: 8,
+        fontStyle: 'italic',
     },
     mainWeather: {
         alignItems: 'center',
-        marginBottom: 40,
+        marginBottom: 30,
     },
     weatherIcon: {
-        width: 120,
-        height: 120,
-        marginBottom: 10,
+        width: 140,
+        height: 140,
+        marginBottom: 15,
+        borderRadius: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
     },
     temperature: {
-        fontSize: 90,
-        fontWeight: '300',
+        fontSize: 96,
+        fontWeight: '200',
         color: '#fff',
-        letterSpacing: -2,
-        marginTop: -15
+        letterSpacing: -3,
+        marginTop: -20,
+        textShadowColor: 'rgba(0,0,0,0.3)',
+        textShadowOffset: { width: 1, height: 1 },
+        textShadowRadius: 2,
     },
     description: {
-        fontSize: 24,
-        color: 'rgba(255,255,255,0.9)',
+        fontSize: 22,
+        color: 'rgba(255,255,255,0.95)',
         fontWeight: '600',
+        marginTop: 5,
     },
-
+    tipContainer: {
+        backgroundColor: '#ffffff',
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 25,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    tipContent: {
+        flex: 1,
+        marginLeft: 12,
+    },
+    tipTitle: {
+        fontSize: 16,
+        color: '#4b4b4b',
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    tipText: {
+        fontSize: 14,
+        color: 'rgba(255, 172, 77, 0.9)',
+        lineHeight: 20,
+    },
     detailsContainer: {
         flex: 1,
-        marginTop: 10
+        marginTop: 10,
     },
     detailItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        padding: 15,
-        borderRadius: 15,
-        marginBottom: 10,
-        backdropFilter: 'blur(5px)',
+        backgroundColor: '#ffffff',
+        padding: 18,
+        borderRadius: 16,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    iconContainer: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
     },
     detailText: {
         flex: 1,
-        marginLeft: 15,
+        marginRight: 12,
     },
     detailLabel: {
         fontSize: 16,
-        color: '#fff',
-        fontWeight: '500',
+        color: '#56ab2f',
+        fontWeight: '600',
     },
     detailDesc: {
         fontSize: 14,
-        color: 'rgba(255,255,255,0.7)',
+        color: '#000',
+        marginTop: 2,
     },
     detailValue: {
         fontSize: 18,
-        fontWeight: '600',
-        color: '#fff',
+        fontWeight: 'bold',
+        color: '#4b4b4b',
+        minWidth: 60,
+        textAlign: 'right',
     },
     footer: {
         alignItems: 'center',
         marginTop: 20,
         paddingBottom: 20,
     },
-    footerText: {
-        fontSize: 12,
-        color: 'rgba(255,255,255,0.6)',
+    refreshButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#56ab2f',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 25,
+    },
+    refreshButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '500',
+        marginLeft: 8,
     },
 });
 

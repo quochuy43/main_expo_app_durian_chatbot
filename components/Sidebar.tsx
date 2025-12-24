@@ -87,6 +87,18 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
         },
       ]
     );
+    router.push('/weather');  // Navigate đến weather screen
+    onClose(); // Đóng sidebar sau khi navigate
+  };
+
+  const handleHumidityPress = () => {
+    router.push('/humility');
+    onClose();
+  };
+
+  const handleBlogPress = () => {
+    router.push('/inblog');
+    onClose();
   };
 
   // Helper for Tooltip Content
@@ -228,6 +240,10 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
                 <MenuItem icon="log-out-outline" label="Đăng xuất" onPress={handleLogout} />
               </View>
             </Tooltip>
+            <MenuItem icon="newspaper-outline" label="Blog" onPress={handleBlogPress} />
+            <MenuItem icon="water-outline" label="Độ ẩm đất" onPress={handleHumidityPress} />
+            <MenuItem icon="partly-sunny-outline" label="Thời tiết" onPress={handleWeatherPress} />
+            <MenuItem icon="log-out-outline" label="Đăng xuất" onPress={handleLogout} />
           </ThemedView>
         </SafeAreaView>
       </Animated.View>
