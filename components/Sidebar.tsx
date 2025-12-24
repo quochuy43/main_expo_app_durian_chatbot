@@ -181,7 +181,7 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
                 contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
                 useInteractionManager={true}
               >
-                <View style={{ backgroundColor }}>
+                <View>
                   <ChatSample text="Tác dụng của sầu riêng với sức khỏe 🍈" index={0} isOpen={isOpen} />
                   <ChatSample text="Sầu riêng nên bảo quản như thế nào?" index={1} isOpen={isOpen} />
                   <ChatSample text="Mẹo chọn sầu riêng ngon?" index={2} isOpen={isOpen} />
@@ -194,10 +194,39 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
 
           {/* Menu dưới */}
           <ThemedView style={styles.footer}>
-            {/* Tour Step 4: Weather */}
             <Tooltip
               isVisible={isWeatherTour}
-              content={renderTooltipContent('Bước 4/10', '☀️ Xem dự báo thời tiết chuyên sâu cho khu vực trồng sầu riêng của bạn.')}
+              content={renderTooltipContent('Bước 4/10', 'Xem các bài viết về cộng đồng sầu riêng')}
+              placement="top"
+              onClose={() => { }}
+              backgroundColor="rgba(0,0,0,0.7)"
+              contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
+              useInteractionManager={true}
+            >
+              <View style={{ backgroundColor, width: '100%' }}>
+                <MenuItem icon="newspaper-outline" label="Blog" onPress={handleBlogPress} />
+              </View>
+            </Tooltip>
+
+
+            <Tooltip
+              isVisible={isWeatherTour}
+              content={renderTooltipContent('Bước 5/10', '☀️ Xem độ ẩm đất hiện tại ở vườn của bạn')}
+              placement="top"
+              onClose={() => { }}
+              backgroundColor="rgba(0,0,0,0.7)"
+              contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
+              useInteractionManager={true}
+            >
+              <View style={{ backgroundColor, width: '100%' }}>
+                <MenuItem icon="water-outline" label="Độ ẩm đất" onPress={handleHumidityPress} />
+              </View>
+            </Tooltip>
+
+
+            <Tooltip
+              isVisible={isWeatherTour}
+              content={renderTooltipContent('Bước 6/10', '☀️ Xem dự báo thời tiết chuyên sâu cho khu vực trồng sầu riêng của bạn.')}
               placement="top"
               onClose={() => { }}
               backgroundColor="rgba(0,0,0,0.7)"
@@ -211,25 +240,10 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
 
             <MenuItem icon="book-outline" label="Hướng dẫn sử dụng" onPress={handleTutorialPress} />
 
-            {/* Tour Step 5: Settings */}
-            <Tooltip
-              isVisible={isSettingsTour}
-              content={renderTooltipContent('Bước 5/10', '⚙️ Cài đặt các tùy chỉnh ở đây.', false)}
-              placement="top"
-              onClose={() => { }}
-              backgroundColor="rgba(0,0,0,0.7)"
-              contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
-              useInteractionManager={true}
-            >
-              <View style={{ backgroundColor, width: '100%' }}>
-                <MenuItem icon="settings-outline" label="Cài đặt" onPress={handleSpeechPress} />
-              </View>
-            </Tooltip>
 
-            {/* Tour Step 6: Logout */}
             <Tooltip
               isVisible={isLogoutTour}
-              content={renderTooltipContent('Bước 6/10', '🚪 Đăng xuất khỏi tài khoản của bạn.', true)}
+              content={renderTooltipContent('Bước 7/10', '🚪 Đăng xuất khỏi tài khoản của bạn.', true)}
               placement="top"
               onClose={() => { }}
               backgroundColor="rgba(0,0,0,0.7)"
@@ -240,10 +254,6 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
                 <MenuItem icon="log-out-outline" label="Đăng xuất" onPress={handleLogout} />
               </View>
             </Tooltip>
-            <MenuItem icon="newspaper-outline" label="Blog" onPress={handleBlogPress} />
-            <MenuItem icon="water-outline" label="Độ ẩm đất" onPress={handleHumidityPress} />
-            <MenuItem icon="partly-sunny-outline" label="Thời tiết" onPress={handleWeatherPress} />
-            <MenuItem icon="log-out-outline" label="Đăng xuất" onPress={handleLogout} />
           </ThemedView>
         </SafeAreaView>
       </Animated.View>
