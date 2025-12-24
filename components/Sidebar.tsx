@@ -60,6 +60,11 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
     onClose();
   };
 
+  const handleBlogPress = () => {
+    router.push('/inblog');
+    onClose();
+  };
+
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View
@@ -95,9 +100,9 @@ export default function Sidebar({ isOpen, onClose, offset }: SidebarProps) {
 
           {/* Menu dưới */}
           <ThemedView style={styles.footer}>
+            <MenuItem icon="newspaper-outline" label="Blog" onPress={handleBlogPress} />
+            <MenuItem icon="water-outline" label="Độ ẩm đất" onPress={handleHumidityPress} />
             <MenuItem icon="partly-sunny-outline" label="Thời tiết" onPress={handleWeatherPress} />
-            {/* <MenuItem icon="settings-outline" label="Cài đặt" /> */}
-            <MenuItem icon="water-outline" label="Độ ẩm" onPress={handleHumidityPress} />
             <MenuItem icon="log-out-outline" label="Đăng xuất" onPress={handleLogout} />
           </ThemedView>
         </SafeAreaView>
