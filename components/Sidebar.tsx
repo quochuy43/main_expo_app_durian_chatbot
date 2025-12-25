@@ -87,8 +87,6 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
         },
       ]
     );
-    router.push('/weather');  // Navigate đến weather screen
-    onClose(); // Đóng sidebar sau khi navigate
   };
 
   const handleHumidityPress = () => {
@@ -127,9 +125,10 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
   );
 
 
-  const isWeatherTour = tourStep === 4;
-  const isSettingsTour = tourStep === 5;
-  const isLogoutTour = tourStep === 6;
+  const isBlogTour = tourStep === 4;
+  const isHumidityTour = tourStep === 5;
+  const isWeatherTour = tourStep === 6;
+  const isLogoutTour = tourStep === 7;
 
   return (
     <GestureDetector gesture={panGesture}>
@@ -143,45 +142,42 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
         <SafeAreaView style={{ flex: 1 }}>
           {/* Header */}
           <ThemedView style={styles.header}>
-            {/* Tour Step 2: Account Info */}
-            <Tooltip
-              isVisible={tourStep === 2}
-              content={renderTooltipContent('Bước 2/10', '👤 Thông tin tài khoản của bạn hiển thị tại đây.')}
-              placement="bottom"
-              onClose={() => { }}
-              backgroundColor="rgba(0,0,0,0.7)"
-              contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
-              useInteractionManager={true}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor }}>
+            {/* Tour Step 2: Account Info - Original with zIndex Highlight */}
+            <View style={{
+              backgroundColor: tourStep === 2 ? 'white' : backgroundColor,
+              width: '100%',
+              zIndex: tourStep === 2 ? 220 : 1,
+              borderRadius: tourStep === 2 ? 12 : 0,
+              elevation: tourStep === 2 ? 10 : 0, // For Android
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: tourStep === 2 ? 0.25 : 0,
+              shadowRadius: 3.84,
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 0, paddingVertical: 4 }}>
                 <Ionicons name="person-circle-outline" size={36} color={textColor} />
                 <ThemedText style={styles.userName}>
                   {user?.full_name || 'Durian Consultant'}
                 </ThemedText>
               </View>
-            </Tooltip>
+            </View>
           </ThemedView>
 
-          <ImageBackground
-            source={require('@/assets/images/durian.png')}
-            resizeMode="contain"
-            style={styles.imageBackground}
-            imageStyle={{ opacity: 0.15, position: 'absolute', right: -50, top: 100, width: 300, height: 300 }}
-          >
+          <View style={styles.chatSamplesContainer}>
             <ScrollView style={styles.chatSamples}>
-              <SectionTitle title="Cuộc trò chuyện mẫu" />
+              <SectionTitle title="Cuộc trò chuyện" />
 
               {/* Tour Step 3: Chat Samples */}
               <Tooltip
                 isVisible={tourStep === 3}
-                content={renderTooltipContent('Bước 3/10', '💡 Các cuộc trò chuyện của bạn sẽ được lưu trữ ở đây, bạn có thể tìm lại chúng dễ dàng.')}
+                content={renderTooltipContent('Bước 3/11', '💡 Các cuộc trò chuyện của bạn sẽ được lưu trữ ở đây, bạn có thể tìm lại chúng dễ dàng.')}
                 placement="bottom"
                 onClose={() => { }}
                 backgroundColor="rgba(0,0,0,0.7)"
                 contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
                 useInteractionManager={true}
               >
-                <View>
+                <View style={{ backgroundColor, width: '100%' }}>
                   <ChatSample text="Tác dụng của sầu riêng với sức khỏe 🍈" index={0} isOpen={isOpen} />
                   <ChatSample text="Sầu riêng nên bảo quản như thế nào?" index={1} isOpen={isOpen} />
                   <ChatSample text="Mẹo chọn sầu riêng ngon?" index={2} isOpen={isOpen} />
@@ -189,14 +185,14 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
                 </View>
               </Tooltip>
             </ScrollView>
-          </ImageBackground>
+          </View>
 
 
           {/* Menu dưới */}
           <ThemedView style={styles.footer}>
             <Tooltip
-              isVisible={isWeatherTour}
-              content={renderTooltipContent('Bước 4/10', 'Xem các bài viết về cộng đồng sầu riêng')}
+              isVisible={isBlogTour}
+              content={renderTooltipContent('Bước 4/11', '📰 Xem các bài viết về cộng đồng sầu riêng')}
               placement="top"
               onClose={() => { }}
               backgroundColor="rgba(0,0,0,0.7)"
@@ -210,8 +206,8 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
 
 
             <Tooltip
-              isVisible={isWeatherTour}
-              content={renderTooltipContent('Bước 5/10', '☀️ Xem độ ẩm đất hiện tại ở vườn của bạn')}
+              isVisible={isHumidityTour}
+              content={renderTooltipContent('Bước 5/11', '💧 Xem độ ẩm đất hiện tại ở vườn của bạn')}
               placement="top"
               onClose={() => { }}
               backgroundColor="rgba(0,0,0,0.7)"
@@ -226,7 +222,7 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
 
             <Tooltip
               isVisible={isWeatherTour}
-              content={renderTooltipContent('Bước 6/10', '☀️ Xem dự báo thời tiết chuyên sâu cho khu vực trồng sầu riêng của bạn.')}
+              content={renderTooltipContent('Bước 6/11', '☀️ Xem dự báo thời tiết chuyên sâu cho khu vực trồng sầu riêng của bạn.')}
               placement="top"
               onClose={() => { }}
               backgroundColor="rgba(0,0,0,0.7)"
@@ -243,7 +239,7 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
 
             <Tooltip
               isVisible={isLogoutTour}
-              content={renderTooltipContent('Bước 7/10', '🚪 Đăng xuất khỏi tài khoản của bạn.', true)}
+              content={renderTooltipContent('Bước 7/11', '🚪 Đăng xuất khỏi tài khoản của bạn.', true)}
               placement="top"
               onClose={() => { }}
               backgroundColor="rgba(0,0,0,0.7)"
@@ -255,6 +251,37 @@ export default function Sidebar({ isOpen, onClose, offset, tourStep = 0, onNextT
               </View>
             </Tooltip>
           </ThemedView>
+
+          {/* Tour Step 2: Custom Overlay */}
+          {tourStep === 2 && (
+            <View style={styles.tourOverlay}>
+              {/* Tour Card */}
+              <View style={{ position: 'absolute', top: 130, left: 20, right: 20, alignItems: 'center', zIndex: 210 }}>
+                <View style={styles.tooltipTriangle} />
+                <View style={[styles.tooltipContent, { width: 280, backgroundColor: 'white', borderRadius: 12, padding: 20 }]}>
+                  <Text style={styles.tourStepIndicator}>Bước 2/11</Text>
+                  <Text style={styles.tooltipText}>👤 Thông tin tài khoản của bạn hiển thị tại đây.</Text>
+                  <View style={styles.tourNavButtons}>
+                    {onPrevTourStep && (
+                      <TouchableOpacity style={styles.tourPrevButton} onPress={onPrevTourStep}>
+                        <Text style={styles.tourPrevButtonText}>← Quay lại</Text>
+                      </TouchableOpacity>
+                    )}
+                    {onEndTour && (
+                      <TouchableOpacity style={styles.tourEndButton} onPress={onEndTour}>
+                        <Text style={styles.tourEndButtonText}>Kết thúc</Text>
+                      </TouchableOpacity>
+                    )}
+                    {onNextTourStep && (
+                      <TouchableOpacity style={styles.tooltipButton} onPress={onNextTourStep}>
+                        <Text style={styles.tooltipButtonText}>Tiếp theo →</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
         </SafeAreaView>
       </Animated.View>
     </GestureDetector>
@@ -349,7 +376,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 8,
   },
-  imageBackground: {
+  chatSamplesContainer: {
     flex: 1,
   },
   chatSampleButton: {
@@ -439,6 +466,26 @@ const styles = StyleSheet.create({
   tourEndButtonText: {
     color: '#fff',
     fontSize: 12,
+
     fontWeight: '500',
+  },
+  tourOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    zIndex: 205,
+  },
+  tooltipTriangle: {
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderBottomWidth: 10,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#ffffff',
+    marginBottom: -1,
+    zIndex: 10,
   },
 });
