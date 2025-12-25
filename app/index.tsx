@@ -58,19 +58,19 @@ export default function HomeScreen() {
   // Handle auto-open/close Sidebar during tour
   useEffect(() => {
     if (showTour) {
-      if (tourStep >= 2 && tourStep <= 6) {
-        // Open Sidebar for Steps 2 to 6 (Account -> Logout)
+      if (tourStep >= 2 && tourStep <= 7) {
+        // Open Sidebar for Steps 2 to 7 (Account -> Logout)
         if (!isSidebarOpen) toggleSidebar(true);
-      } else if (tourStep >= 7) {
-        // Close Sidebar when moving to Step 7 (Chat Body)
+      } else if (tourStep >= 8) {
+        // Close Sidebar when moving to Step 8 (Chat Body)
         if (isSidebarOpen) toggleSidebar(false);
       }
     }
   }, [tourStep, showTour]);
 
   const handleNextTourStep = () => {
-    // Total 10 steps
-    if (tourStep < 10) {
+    // Total 11 steps
+    if (tourStep < 11) {
       setTourStep(tourStep + 1);
     } else {
       // Tour hoàn thành
@@ -130,41 +130,22 @@ export default function HomeScreen() {
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? 45 : 0} style={styles.flex1}>
 
+
+
               {/* Header */}
               <ThemedView style={styles.header}>
-                {/* Tour Step 1: Menu Button */}
-                <Tooltip
-                  isVisible={tourStep === 1}
-                  content={
-                    <View style={styles.tooltipContent}>
-                      <Text style={styles.tourStepIndicator}>Bước 1/10 - Menu</Text>
-                      <Text style={styles.tooltipText}>
-                        📂 Mở menu để xem thêm các tính năng như thời tiết, mẫu câu hỏi và cài đặt...
-                      </Text>
-                      <View style={styles.tourNavButtons}>
-                        <TouchableOpacity style={styles.tourEndButton} onPress={handleEndTour}>
-                          <Text style={styles.tourEndButtonText}>Kết thúc</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.tooltipButton} onPress={handleNextTourStep}>
-                          <Text style={styles.tooltipButtonText}>Mở Menu →</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  }
-                  placement="bottom"
-                  onClose={() => { }}
-                  backgroundColor="rgba(0,0,0,0.7)"
-                  contentStyle={{ backgroundColor: '#fff', borderRadius: 12 }}
-                >
-                  <TouchableOpacity onPress={() => toggleSidebar(true)}>
+                {/* Tour Step 1: Menu Button - No Tooltip Wrapper */}
+                <View style={{ backgroundColor: background, opacity: tourStep === 1 ? 0 : 1 }}>
+                  <TouchableOpacity onPress={() => toggleSidebar(true)} style={{ padding: 4 }}>
                     <Ionicons name="menu" size={28} color={iconColor} />
                   </TouchableOpacity>
-                </Tooltip>
+                </View>
                 <ThemedText style={styles.headerTitle}>Durian Consultant</ThemedText>
               </ThemedView>
 
               {/* Chat Body - No Tooltip wrapper for large container */}
               <View style={styles.chatContainer}>
+
                 <ImageBackground source={require("@/assets/images/durian.png")} resizeMode="contain" style={styles.bgImage} imageStyle={styles.bgImageStyle} />
 
                 <FlatList
@@ -184,11 +165,11 @@ export default function HomeScreen() {
                   updateCellsBatchingPeriod={50}
                 />
 
-                {/* Tour Step 7: Chat Screen (Former Step 5) */}
-                {tourStep === 7 && (
+                {/* Tour Step 8: Chat Screen */}
+                {tourStep === 8 && (
                   <View style={styles.tourOverlay}>
                     <View style={styles.tourCard}>
-                      <Text style={styles.tourStepIndicator}>Bước 7/10 - Trang Chat</Text>
+                      <Text style={styles.tourStepIndicator}>Bước 8/11 - Trang Chat</Text>
                       <Text style={styles.tourCardText}>
                         💬 Đây là nơi hiển thị cuộc trò chuyện với AI chuyên gia sầu riêng.
                       </Text>
@@ -233,6 +214,47 @@ export default function HomeScreen() {
                 />
 
               </View>
+              {/* Tour Step 1: Menu Overlay */}
+              {tourStep === 1 && (
+                <View style={styles.tourOverlay}>
+                  {/* Spotlight: Highlighted Button Component */}
+                  <View style={{
+                    position: 'absolute',
+                    top: 16,
+                    left: 20,
+                    backgroundColor: 'white',
+                    borderRadius: 8,
+                    padding: 4,
+                    zIndex: 210,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 3.84,
+                    elevation: 5
+                  }}>
+                    <Ionicons name="menu" size={28} color="#333" />
+                  </View>
+
+                  {/* Tour Card */}
+                  <View style={{ position: 'absolute', top: 75, left: 20, right: 20, alignItems: 'flex-start', zIndex: 210 }}>
+                    <View style={styles.tooltipTriangle} />
+                    <View style={[styles.tourCard, { marginHorizontal: 0, width: 280, alignItems: 'center' }]}>
+                      <Text style={styles.tourStepIndicator}>Bước 1/11 - Menu</Text>
+                      <Text style={styles.tourCardText}>
+                        📂 Mở menu để xem thêm các tính năng như thời tiết, mẫu câu hỏi và cài đặt...
+                      </Text>
+                      <View style={styles.tourNavButtons}>
+                        <TouchableOpacity style={styles.tourEndButton} onPress={handleEndTour}>
+                          <Text style={styles.tourEndButtonText}>Kết thúc</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.tooltipButton} onPress={handleNextTourStep}>
+                          <Text style={styles.tooltipButtonText}>Tiếp →</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              )}
             </KeyboardAvoidingView>
           </TouchableWithoutFeedback>
         </Animated.View>
@@ -341,5 +363,20 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 13,
     fontWeight: "500",
+  },
+  tooltipTriangle: {
+    width: 0,
+    height: 0,
+    backgroundColor: "transparent",
+    borderStyle: "solid",
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderBottomWidth: 10,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderBottomColor: "#ffffff",
+    marginLeft: 20, // Align with the menu icon roughly
+    marginBottom: -1,
+    zIndex: 10,
   },
 });

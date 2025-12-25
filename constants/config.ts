@@ -1,5 +1,5 @@
 // API base URL configuration
-export const API_URL = "https://f482016d96ae.ngrok-free.app";
+export const API_URL = "https://ff94071d33e2.ngrok-free.app";
 
 // API weather
 export const WEATHER_API_KEY = '2102014eae2509c5e8870a757be55c97';

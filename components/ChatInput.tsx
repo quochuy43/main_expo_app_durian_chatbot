@@ -66,10 +66,10 @@ export default function ChatInput({
   return (
     <View style={styles.container}>
 
-      {/* Mic Button - Step 8 */}
+      {/* Mic Button - Step 9 */}
       <Tooltip
-        isVisible={tourStep === 8}
-        content={renderTooltipContent('Bước 8/10', '🎤 Nhấn vào để nói chuyện trực tiếp với chuyên gia sầu riêng thay vì gõ phím.')}
+        isVisible={tourStep === 9}
+        content={renderTooltipContent('Bước 9/11', '🎤 Nhấn vào để nói chuyện trực tiếp với chuyên gia sầu riêng thay vì gõ phím.')}
         placement="top"
         onClose={() => { }}
         backgroundColor="rgba(0,0,0,0.7)"
@@ -88,10 +88,10 @@ export default function ChatInput({
         </TouchableOpacity>
       </Tooltip>
 
-      {/* Image/Camera Buttons - Step 9 */}
+      {/* Image/Camera Buttons - Step 10 */}
       <Tooltip
-        isVisible={tourStep === 9}
-        content={renderTooltipContent('Bước 9/10', '📷 Chụp hoặc gửi ảnh lá/quả sầu riêng để AI chẩn đoán bệnh chính xác.')}
+        isVisible={tourStep === 10}
+        content={renderTooltipContent('Bước 10/11', '📷 Chụp hoặc gửi ảnh lá/quả sầu riêng để AI chẩn đoán bệnh chính xác.')}
         placement="top"
         onClose={() => { }}
         backgroundColor="rgba(0,0,0,0.7)"
@@ -132,8 +132,8 @@ export default function ChatInput({
         </View>
 
         <Tooltip
-          isVisible={tourStep === 10}
-          content={renderTooltipContent('Bước 10/10', '➤ Nhập câu hỏi và nhấn Gửi để nhận tư vấn ngay lập tức.', true)}
+          isVisible={tourStep === 11}
+          content={renderTooltipContent('Bước 11/11', '➤ Nhập câu hỏi và nhấn Gửi để nhận tư vấn ngay lập tức.', true)}
           placement="top"
           onClose={() => { }}
           backgroundColor="rgba(0,0,0,0.7)"
